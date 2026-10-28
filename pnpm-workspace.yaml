@@ -7,7 +7,9 @@ minimumReleaseAge: 1440
 # Install scripts run only for packages listed here; any other package that
 # wants one fails the install, so nothing runs unreviewed.
 strictDepBuilds: true
-onlyBuiltDependencies: []
+onlyBuiltDependencies:
+  # Checks its platform binary after install; the release bundle is built with it.
+  - esbuild
 
 # Security fixes for dev-only packages pulled in by other tools. Remove an
 # entry once the tool that needs it ships the fixed version itself.

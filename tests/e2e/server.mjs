@@ -23,12 +23,22 @@ const CSP = [
   "require-trusted-types-for 'script'",
 ].join("; ");
 
-const routes = { "/": "tests/e2e/fixtures/index.html" };
+// /types/ is a second host page. It loads the built element from /types/, so the element finds the fixture
+// chapters.json beside it instead of the real one: one chapter for each challenge type, with known answers.
+const routes = {
+  "/": "tests/e2e/fixtures/index.html",
+  "/types/": "tests/e2e/fixtures/types.html",
+  "/types/chapters.json": "tests/e2e/fixtures/chapters.json",
+};
+const fromDisk = (pathname) =>
+  normalize(pathname)
+    .replace(/^\/+/, "")
+    .replace(/^types\//, "dist/");
 
 createServer(async (req, res) => {
   const url = new URL(req.url ?? "/", `http://127.0.0.1:${PORT}`);
   if (url.pathname === "/health") return res.end("ok");
-  const rel = routes[url.pathname] ?? normalize(url.pathname).replace(/^\/+/, "");
+  const rel = routes[url.pathname] ?? fromDisk(url.pathname);
   if (!rel.startsWith("dist/") && !rel.startsWith("tests/e2e/fixtures/")) {
     res.writeHead(404);
     return res.end();

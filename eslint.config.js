@@ -16,6 +16,10 @@ export default [
       "no-eval": "error",
       "no-implied-eval": "error",
       "no-new-func": "error",
+      // Same limits as CodeScene's code health checks, so they fail here first.
+      complexity: ["error", 9],
+      "max-lines-per-function": ["error", { max: 120, skipBlankLines: true, skipComments: true }],
+      "max-params": ["error", 4],
     },
   },
   {

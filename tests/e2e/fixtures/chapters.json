@@ -1,0 +1,439 @@
+{
+  "version": 1,
+  "built": "2026-10-28",
+  "chapters": [
+    {
+      "chapter": 1,
+      "slug": "drill-recall",
+      "title": "Recall drill",
+      "emoji": "🃏",
+      "pillar": "Core concepts",
+      "blurb": "One recall card, then a boss.",
+      "open": true,
+      "boss": "recall-boss",
+      "challenges": [
+        {
+          "id": "recall-1",
+          "type": "recall",
+          "bloom": "remember",
+          "prompt": "What does a cache give up in exchange for speed?",
+          "answer": "Freshness: a cached copy can be out of date.",
+          "explain": "A cache serves a copy, and the copy can lag behind the source. Say how stale is acceptable.",
+          "source": "https://en.wikipedia.org/wiki/Cache_(computing)"
+        },
+        {
+          "id": "recall-boss",
+          "type": "recall",
+          "bloom": "remember",
+          "prompt": "Name one way to keep a cache fresh.",
+          "answer": "Give every entry a time to live.",
+          "explain": "A time to live bounds how stale an entry can get.",
+          "source": "https://en.wikipedia.org/wiki/Time_to_live"
+        }
+      ]
+    },
+    {
+      "chapter": 2,
+      "slug": "drill-multi",
+      "title": "Multi drill",
+      "emoji": "☑️",
+      "pillar": "Core concepts",
+      "blurb": "One pick-all-that-apply, then a boss.",
+      "open": true,
+      "boss": "multi-boss",
+      "challenges": [
+        {
+          "id": "multi-1",
+          "type": "multi",
+          "bloom": "understand",
+          "prompt": "Which of these keep data in memory?",
+          "options": ["Redis", "PostgreSQL", "Memcached", "Amazon S3"],
+          "correct": [0, 2],
+          "explain": "Redis and Memcached hold data in memory, which is why they are fast and why they are caches.",
+          "source": "https://redis.io/docs/"
+        },
+        {
+          "id": "multi-boss",
+          "type": "recall",
+          "bloom": "remember",
+          "prompt": "Name an in-memory store.",
+          "answer": "Redis.",
+          "explain": "Redis keeps its data in memory.",
+          "source": "https://redis.io/docs/"
+        }
+      ]
+    },
+    {
+      "chapter": 3,
+      "slug": "drill-duel",
+      "title": "Duel drill",
+      "emoji": "⚖️",
+      "pillar": "Core concepts",
+      "blurb": "One trade-off duel, then a boss.",
+      "open": true,
+      "boss": "duel-boss",
+      "challenges": [
+        {
+          "id": "duel-1",
+          "type": "duel",
+          "bloom": "evaluate",
+          "prompt": "Reads are slow and the same rows are read again and again. What do you add?",
+          "choices": ["A cache in front of the database", "A second database for writes"],
+          "correct": 0,
+          "reasons": ["Repeated reads come from memory", "Writes get faster", "It removes the database"],
+          "reason": 0,
+          "costs": ["Nothing at all", "A copy that can be stale", "Every read gets slower"],
+          "cost": 1,
+          "explain": "A cache serves repeated reads from memory. The cost is a copy that can lag behind the database.",
+          "source": "https://en.wikipedia.org/wiki/Cache_(computing)"
+        },
+        {
+          "id": "duel-boss",
+          "type": "recall",
+          "bloom": "remember",
+          "prompt": "What does a cache cost you?",
+          "answer": "Freshness.",
+          "explain": "The copy can be stale.",
+          "source": "https://en.wikipedia.org/wiki/Cache_(computing)"
+        }
+      ]
+    },
+    {
+      "chapter": 4,
+      "slug": "drill-write",
+      "title": "Write drill",
+      "emoji": "✍️",
+      "pillar": "Core concepts",
+      "blurb": "One written answer, then a boss.",
+      "open": true,
+      "boss": "write-boss",
+      "challenges": [
+        {
+          "id": "write-1",
+          "type": "write",
+          "bloom": "apply",
+          "prompt": "Write two non-functional requirements for a photo app.",
+          "key_points": ["A scale figure", "A latency target"],
+          "model": "About ten million uploads a day; a photo loads in under 200 ms for 99% of requests.",
+          "explain": "Numbers turn wishes into decisions. Give the scale and a latency target.",
+          "source": "https://en.wikipedia.org/wiki/Non-functional_requirement"
+        },
+        {
+          "id": "write-boss",
+          "type": "recall",
+          "bloom": "remember",
+          "prompt": "What does a non-functional requirement carry?",
+          "answer": "A number.",
+          "explain": "A number makes it testable.",
+          "source": "https://en.wikipedia.org/wiki/Non-functional_requirement"
+        }
+      ]
+    },
+    {
+      "chapter": 5,
+      "slug": "drill-estimate",
+      "title": "Estimate drill",
+      "emoji": "🔢",
+      "pillar": "Core concepts",
+      "blurb": "One estimate with a fixed answer, then a boss.",
+      "open": true,
+      "boss": "estimate-boss",
+      "challenges": [
+        {
+          "id": "estimate-1",
+          "type": "estimate",
+          "bloom": "apply",
+          "prompt": "Size the busiest second.",
+          "generator": { "kind": "peak_rps", "params": { "users": [1000000, 1000000], "actions": [10, 10] } },
+          "explain": "Divide a day's requests by about 100,000 seconds, then multiply by 10 for the peak.",
+          "source": "https://en.wikipedia.org/wiki/Back-of-the-envelope_calculation"
+        },
+        {
+          "id": "estimate-boss",
+          "type": "recall",
+          "bloom": "remember",
+          "prompt": "About how many seconds are in a day?",
+          "answer": "About 100,000.",
+          "explain": "86,400, rounded up.",
+          "source": "https://en.wikipedia.org/wiki/Day"
+        }
+      ]
+    },
+    {
+      "chapter": 6,
+      "slug": "drill-fill",
+      "title": "Fill drill",
+      "emoji": "🧩",
+      "pillar": "Core concepts",
+      "blurb": "One diagram to fill, then a boss.",
+      "open": true,
+      "boss": "fill-boss",
+      "challenges": [
+        {
+          "id": "fill-1",
+          "type": "fill",
+          "bloom": "apply",
+          "prompt": "Fill in the two empty boxes.",
+          "diagram": {
+            "width": 640,
+            "height": 300,
+            "nodes": [
+              { "id": "client", "label": "Web app", "x": 20, "y": 126 },
+              { "id": "front", "label": "?", "x": 250, "y": 126 },
+              { "id": "store", "label": "?", "x": 490, "y": 126 }
+            ],
+            "edges": [
+              ["client", "front"],
+              ["front", "store", "reads and writes"]
+            ]
+          },
+          "slots": { "front": "Load balancer", "store": "Database" },
+          "palette": ["Load balancer", "Database", "Queue"],
+          "explain": "Traffic meets a load balancer first; the rows live in the database.",
+          "source": "https://en.wikipedia.org/wiki/Load_balancing_(computing)"
+        },
+        {
+          "id": "fill-boss",
+          "type": "recall",
+          "bloom": "remember",
+          "prompt": "What spreads traffic across servers?",
+          "answer": "A load balancer.",
+          "explain": "It spreads requests across servers.",
+          "source": "https://en.wikipedia.org/wiki/Load_balancing_(computing)"
+        }
+      ]
+    },
+    {
+      "chapter": 7,
+      "slug": "drill-sticker",
+      "title": "Sticker drill",
+      "emoji": "🏷️",
+      "pillar": "Core concepts",
+      "blurb": "One diagram to sticker, then a boss.",
+      "open": true,
+      "boss": "sticker-boss",
+      "challenges": [
+        {
+          "id": "sticker-1",
+          "type": "sticker",
+          "bloom": "apply",
+          "prompt": "Put each job on the box that should do it.",
+          "diagram": {
+            "width": 640,
+            "height": 300,
+            "nodes": [
+              { "id": "gw", "label": "API gateway", "x": 60, "y": 126 },
+              { "id": "db", "label": "Database", "x": 420, "y": 126 }
+            ],
+            "edges": [["gw", "db"]]
+          },
+          "stickers": ["Check the token", "Store the rows"],
+          "answers": { "gw": ["Check the token"], "db": ["Store the rows"] },
+          "explain": "The gateway checks who is calling; the database stores the rows.",
+          "source": "https://en.wikipedia.org/wiki/API_management"
+        },
+        {
+          "id": "sticker-boss",
+          "type": "recall",
+          "bloom": "remember",
+          "prompt": "Which box checks the access token?",
+          "answer": "The API gateway.",
+          "explain": "It is the front door.",
+          "source": "https://en.wikipedia.org/wiki/API_management"
+        }
+      ]
+    },
+    {
+      "chapter": 8,
+      "slug": "drill-flaw",
+      "title": "Flaw drill",
+      "emoji": "🔍",
+      "pillar": "Core concepts",
+      "blurb": "One flaw to spot, then a boss.",
+      "open": true,
+      "boss": "flaw-boss",
+      "challenges": [
+        {
+          "id": "flaw-1",
+          "type": "flaw",
+          "bloom": "analyse",
+          "prompt": "Find the weak box, then pick the fix.",
+          "diagram": {
+            "width": 640,
+            "height": 300,
+            "nodes": [
+              { "id": "client", "label": "Web app", "x": 20, "y": 126 },
+              { "id": "api", "label": "App servers", "x": 250, "y": 126 },
+              { "id": "db", "label": "One database, no copies", "x": 490, "y": 126 }
+            ],
+            "edges": [
+              ["client", "api"],
+              ["api", "db"]
+            ]
+          },
+          "flaw": "db",
+          "fixes": [
+            "Add a replica that can take over",
+            "Add more app servers",
+            "Put a cache in front of the app servers"
+          ],
+          "fix": 0,
+          "explain": "One database with no copy is a single point of failure. A replica can take over.",
+          "source": "https://en.wikipedia.org/wiki/Single_point_of_failure"
+        },
+        {
+          "id": "flaw-boss",
+          "type": "recall",
+          "bloom": "remember",
+          "prompt": "What removes a single point of failure?",
+          "answer": "A second copy that can take over.",
+          "explain": "Redundancy.",
+          "source": "https://en.wikipedia.org/wiki/Single_point_of_failure"
+        }
+      ]
+    },
+    {
+      "chapter": 9,
+      "slug": "drill-order",
+      "title": "Order drill",
+      "emoji": "↕️",
+      "pillar": "Core concepts",
+      "blurb": "One list to put in order, then a boss.",
+      "open": true,
+      "boss": "order-boss",
+      "challenges": [
+        {
+          "id": "order-1",
+          "type": "order",
+          "bloom": "remember",
+          "prompt": "Put the steps of a design round in order.",
+          "items": ["Requirements", "API", "High-level design", "Deep dives"],
+          "explain": "Requirements first, because every later box has to serve one.",
+          "source": "https://en.wikipedia.org/wiki/Systems_design"
+        },
+        {
+          "id": "order-boss",
+          "type": "recall",
+          "bloom": "remember",
+          "prompt": "What comes first in a design round?",
+          "answer": "The requirements.",
+          "explain": "Everything else serves them.",
+          "source": "https://en.wikipedia.org/wiki/Systems_design"
+        }
+      ]
+    },
+    {
+      "chapter": 10,
+      "slug": "drill-lightning",
+      "title": "Lightning drill",
+      "emoji": "⚡",
+      "pillar": "Core concepts",
+      "blurb": "One lightning round, then a boss.",
+      "open": true,
+      "boss": "lightning-boss",
+      "challenges": [
+        {
+          "id": "lightning-1",
+          "type": "lightning",
+          "bloom": "remember",
+          "prompt": "When you hear this, reach for what?",
+          "pairs": [
+            ["Reads are slow", "Add a cache"],
+            ["One server is overloaded", "Add a load balancer"],
+            ["Writes arrive in bursts", "Add a queue"],
+            ["Data outgrows one machine", "Shard it"],
+            ["A region goes down", "Fail over"],
+            ["Search by words", "Use a search index"]
+          ],
+          "explain": "Each problem has a usual first tool. Name it, then say what it costs.",
+          "source": "https://github.com/donnemartin/system-design-primer"
+        },
+        {
+          "id": "lightning-boss",
+          "type": "recall",
+          "bloom": "remember",
+          "prompt": "Writes arrive in bursts. What do you reach for?",
+          "answer": "A queue.",
+          "explain": "A queue smooths bursts.",
+          "source": "https://github.com/donnemartin/system-design-primer"
+        }
+      ]
+    },
+    {
+      "chapter": 11,
+      "slug": "drill-sprint",
+      "title": "Sprint drill",
+      "emoji": "⏱️",
+      "pillar": "Core concepts",
+      "blurb": "One timed sprint, then a boss.",
+      "open": true,
+      "boss": "sprint-boss",
+      "challenges": [
+        {
+          "id": "sprint-1",
+          "type": "sprint",
+          "bloom": "create",
+          "prompt": "Out loud: the requirements for a link shortener.",
+          "minutes": 1,
+          "checks": ["Read the problem back", "Gave the scale and the peak", "Said what's out of scope"],
+          "explain": "This is the shape of every round's first minutes.",
+          "source": "https://github.com/donnemartin/system-design-primer"
+        },
+        {
+          "id": "sprint-boss",
+          "type": "recall",
+          "bloom": "remember",
+          "prompt": "What do you do with the problem first?",
+          "answer": "Read it back.",
+          "explain": "It catches a misheard problem.",
+          "source": "https://github.com/donnemartin/system-design-primer"
+        }
+      ]
+    },
+    {
+      "chapter": 12,
+      "slug": "full-run",
+      "title": "A full run",
+      "emoji": "🏁",
+      "pillar": "Core concepts",
+      "blurb": "A miss, a second chance, a boss and the results.",
+      "open": true,
+      "boss": "run-boss",
+      "challenges": [
+        {
+          "id": "run-multi",
+          "type": "multi",
+          "bloom": "understand",
+          "prompt": "Which of these are message queues?",
+          "options": ["Kafka", "Redis Cluster", "Amazon SQS", "PostgreSQL"],
+          "correct": [0, 2],
+          "explain": "Kafka and SQS hold messages until a consumer takes them.",
+          "source": "https://kafka.apache.org/"
+        },
+        {
+          "id": "run-recall",
+          "type": "recall",
+          "bloom": "remember",
+          "prompt": "What does a queue smooth out?",
+          "answer": "Bursts of work.",
+          "explain": "Producers can run ahead of consumers for a while.",
+          "source": "https://kafka.apache.org/"
+        },
+        {
+          "id": "run-boss",
+          "type": "duel",
+          "bloom": "evaluate",
+          "prompt": "Orders arrive in bursts and the payment service is slow. What do you add?",
+          "choices": ["A queue between them", "A bigger payment server"],
+          "correct": 0,
+          "reasons": ["The queue absorbs the burst", "Payments get cheaper", "It removes retries"],
+          "reason": 0,
+          "costs": ["Nothing", "Orders are confirmed a little later", "Every order is lost on restart"],
+          "cost": 1,
+          "explain": "A queue lets orders pile up safely while payments catch up. The cost is a short delay.",
+          "source": "https://kafka.apache.org/"
+        }
+      ]
+    }
+  ]
+}
