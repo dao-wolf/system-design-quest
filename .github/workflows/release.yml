@@ -109,5 +109,6 @@ jobs:
           node-version: 24
           registry-url: https://registry.npmjs.org
       # Staged, never published directly: the package's trusted publisher allows only npm stage publish.
+      # The leading ./ matters: npm reads "package/x.tgz" as the GitHub repo shorthand "user/repo".
       - name: Stage the package
-        run: npm stage publish package/*.tgz --provenance --access public
+        run: npm stage publish ./package/*.tgz --provenance --access public
