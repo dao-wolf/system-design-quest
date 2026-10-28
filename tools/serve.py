@@ -145,6 +145,11 @@ def make_handler(data_file, state_dir, web_dir=WEB):
     return Handler
 
 
+class Server(ThreadingHTTPServer):
+    # The page is native ES modules, fetched in parallel; the default backlog of 5 drops some of those connections.
+    request_queue_size = 64
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--port", type=int, default=8777)
@@ -154,7 +159,7 @@ def main():
     a = ap.parse_args()
     if a.state:
         os.makedirs(a.state, exist_ok=True)
-    server = ThreadingHTTPServer(("127.0.0.1", a.port), make_handler(a.data, a.state, os.path.abspath(a.dir)))
+    server = Server(("127.0.0.1", a.port), make_handler(a.data, a.state, os.path.abspath(a.dir)))
     print(f"System Design Quest on http://127.0.0.1:{a.port}" + (" (coach on)" if a.state else ""), flush=True)
     server.serve_forever()
 
