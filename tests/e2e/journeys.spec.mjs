@@ -99,7 +99,7 @@ test("on a phone the game fits a host page's flex column, top bar included", asy
   await expect.poll(() => page.locator("main").evaluate((main) => main.getBoundingClientRect().width)).toBe(375);
   expect(await page.locator("header.top").evaluate((bar) => bar.scrollWidth <= bar.clientWidth)).toBe(true);
   await expect(page.getByRole("button", { name: "👤 You" })).toBeInViewport({ ratio: 1 });
-  await expect(page.locator(".stat .short")).toHaveText("/5");
+  await expectShortStat(page);
 });
 
 // The bar shortens by the game's own width, not the window's: a narrow column on a wide screen (daowolf.com between
@@ -112,8 +112,17 @@ test("in a narrow column the top bar shortens by the game's width, not the windo
   await expect(page.locator(".stat .short")).toBeHidden();
   await page.locator("main").evaluate((main) => Object.assign(main.style, { width: "448px" }));
   await expect(page.locator(".brand span")).toBeHidden();
-  await expect(page.locator(".stat .short")).toHaveText("/5");
+  await expectShortStat(page);
 });
+
+// The short "/5" shows, and the long form is only there for screen readers. toBeVisible() counts a 1px
+// visually hidden element as visible, so measure the long form instead.
+async function expectShortStat(page) {
+  await expect(page.locator(".stat .short")).toBeVisible();
+  await expect
+    .poll(() => page.locator(".stat .long").evaluate((el) => el.getBoundingClientRect().width))
+    .toBeLessThanOrEqual(1);
+}
 
 // A new screen scrolls the game's top back into view. On a host page with its own header, it must stop at
 // --sticky-top, so the run's bar lands below the game's stuck top bar instead of under it. On a phone, where the

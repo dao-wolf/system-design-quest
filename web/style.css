@@ -135,6 +135,14 @@ a {
     display: none;
   }
 }
+/* Browsers without container queries (Safari before 16, Firefox before 110) fall back to the window's width. */
+@supports not (container-type: inline-size) {
+  @media (max-width: 600px) {
+    .brand span {
+      display: none;
+    }
+  }
+}
 /* Long form for screen readers only, short form on screen; a long company name in a countdown wraps. */
 @container (max-width: 440px) {
   .stat {
