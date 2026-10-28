@@ -74,6 +74,8 @@ function current() {
   return app.run.queue[app.run.i];
 }
 
+const BEFORE_BOSS = new Set(["main", "second"]);
+
 export function advance() {
   const run = app.run;
   run.i++;
@@ -86,7 +88,7 @@ export function advance() {
     toast("🔁 Second chance: the ones you missed, for half points");
     return showChallenge();
   }
-  if ((run.phase === "main" || run.phase === "second") && run.boss) {
+  if (run.boss && BEFORE_BOSS.has(run.phase)) {
     run.phase = "boss";
     run.queue = [{ c: run.boss, second: false }];
     run.i = 0;

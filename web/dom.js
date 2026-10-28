@@ -57,9 +57,11 @@ export function confetti() {
   setTimeout(() => box.remove(), 3500);
 }
 // One piece of a line: **bold**, *italic*, or plain text.
+// True when part is text wrapped in the marker, such as **bold** or *italic*.
+const isWrapped = (part, mark) => part.length > 2 * mark.length && part.startsWith(mark) && part.endsWith(mark);
 function richPart(part) {
-  if (part.startsWith("**") && part.endsWith("**") && part.length > 4) return h("b", {}, part.slice(2, -2));
-  if (part.startsWith("*") && part.endsWith("*") && part.length > 2) return h("i", {}, part.slice(1, -1));
+  if (isWrapped(part, "**")) return h("b", {}, part.slice(2, -2));
+  if (isWrapped(part, "*")) return h("i", {}, part.slice(1, -1));
   return part;
 }
 

@@ -24,55 +24,46 @@ export function renderCoach() {
   );
 }
 
+function coachMessage(m) {
+  const time = new Date(m.ts).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  return h("div", { class: "msg" }, h("div", { class: "t" }, time), richText(m.text));
+}
+
+function showMessages(messages) {
+  if (!messages.length) return;
+  const box = $("msgs");
+  box.append(...messages.map(coachMessage));
+  box.scrollTop = box.scrollHeight;
+  if (app.coachNext > 0) toast("💬 The coach replied");
+}
+
+function assignedCard(a) {
+  const chapter = a.chapter ? app.bundle.chapters.find((c) => c.chapter === a.chapter) : null;
+  return h(
+    "div",
+    { class: "assigned" },
+    h("div", {}, h("b", {}, "🎯 Coach's challenge"), a.why ? h("div", { class: "muted" }, a.why) : null),
+    h("div", {}, a.challenge.prompt),
+    h("button", { class: "btn small", onclick: () => startSingle(a.challenge, chapter) }, "Play it"),
+  );
+}
+
+// The coach's challenges you haven't answered yet.
+function showAssigned(assigned) {
+  const done = new Set(app.events.filter((e) => e.kind === "answer").map((e) => e.challenge));
+  const open = assigned.filter((a) => !done.has(a.challenge.id));
+  if (open.length === app.assigned.length) return;
+  if (open.length > app.assigned.length) toast("🎯 The coach set you a challenge");
+  app.assigned = open;
+  $("assigned").replaceChildren(...open.map(assignedCard));
+}
+
 export async function pollCoach() {
   try {
     const r = await (await fetch(`/api/coach?after=${app.coachNext}`, { cache: "no-store" })).json();
-    if (r.messages.length) {
-      const box = $("msgs");
-      for (const m of r.messages) {
-        box.append(
-          h(
-            "div",
-            { class: "msg" },
-            h(
-              "div",
-              { class: "t" },
-              new Date(m.ts).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
-            ),
-            richText(m.text),
-          ),
-        );
-      }
-      box.scrollTop = box.scrollHeight;
-      if (app.coachNext > 0) toast("💬 The coach replied");
-    }
+    showMessages(r.messages);
     app.coachNext = r.next;
-    const assigned = await (await fetch("/api/assigned", { cache: "no-store" })).json();
-    const done = new Set(app.events.filter((e) => e.kind === "answer").map((e) => e.challenge));
-    const open = assigned.filter((a) => !done.has(a.challenge.id));
-    if (open.length !== app.assigned.length) {
-      if (open.length > app.assigned.length) toast("🎯 The coach set you a challenge");
-      app.assigned = open;
-      $("assigned").replaceChildren(
-        ...open.map((a) =>
-          h(
-            "div",
-            { class: "assigned" },
-            h("div", {}, h("b", {}, "🎯 Coach's challenge"), a.why ? h("div", { class: "muted" }, a.why) : null),
-            h("div", {}, a.challenge.prompt),
-            h(
-              "button",
-              {
-                class: "btn small",
-                onclick: () =>
-                  startSingle(a.challenge, a.chapter ? app.bundle.chapters.find((c) => c.chapter === a.chapter) : null),
-              },
-              "Play it",
-            ),
-          ),
-        ),
-      );
-    }
+    showAssigned(await (await fetch("/api/assigned", { cache: "no-store" })).json());
   } catch {
     /* the server went away; try again next tick */
   }

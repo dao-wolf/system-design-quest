@@ -85,7 +85,7 @@ function introHint() {
 
 function heldHint() {
   const held = app.bundle.held;
-  if (!held || !(held.challenges || held.chapters)) return [];
+  if (!(held?.challenges || held?.chapters)) return [];
   return [
     h(
       "div",

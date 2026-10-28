@@ -33,13 +33,15 @@ function answerEvent({ run, c, second, isBoss, state }, res, fraction, s) {
 }
 
 // A first-try miss in the main run comes back for a second chance; a boss sets the run's boss result.
-function tally({ run, c, second, isBoss }, fraction, s) {
+const comesBack = ({ run, second, isBoss }, s) => !s.correct && !second && !isBoss && run.phase === "main";
+function tally(turn, fraction, s) {
+  const { run, c, second, isBoss } = turn;
   run.answered++;
   run.points += s.points;
   if (s.correct) run.right++;
   run.bestCombo = Math.max(run.bestCombo, s.combo);
   run.results.push({ id: c.id, second, correct: s.correct, fraction, points: s.points, boss: isBoss });
-  if (!s.correct && !second && !isBoss && run.phase === "main") run.misses.push(c);
+  if (comesBack(turn, s)) run.misses.push(c);
   if (isBoss) run.bossResult = fraction;
 }
 
