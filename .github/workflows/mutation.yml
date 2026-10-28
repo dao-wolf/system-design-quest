@@ -2,10 +2,10 @@ name: Mutation
 
 on:
   pull_request:
-    paths: ["web/engine.js", "tests/engine.test.mjs", "stryker.config.mjs"]
+    paths: ["web/engine.js", "tests/engine.test.mjs", "stryker.config.mjs", ".github/workflows/mutation.yml"]
   push:
     branches: [main]
-    paths: ["web/engine.js", "tests/engine.test.mjs", "stryker.config.mjs"]
+    paths: ["web/engine.js", "tests/engine.test.mjs", "stryker.config.mjs", ".github/workflows/mutation.yml"]
   schedule:
     - cron: "0 6 * * 1" # Mondays: a full run, which incremental runs skip
   workflow_dispatch:
@@ -28,13 +28,15 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # Reuse the last results from main, so PRs only re-test what changed.
+      # Reuse the last results from main, so PRs only re-test what changed. Only with the same unit tests:
+      # the command runner reports them as one test, so Stryker can't see them change and would keep
+      # mutants "survived" that new tests now kill. New or changed tests mean a full run.
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: reports/stryker-incremental.json
-          key: stryker-${{ github.ref_name }}-${{ github.sha }}
+          key: stryker-${{ github.ref_name }}-${{ hashFiles('tests/engine.test.mjs') }}-${{ github.sha }}
           restore-keys: |
-            stryker-main-
+            stryker-main-${{ hashFiles('tests/engine.test.mjs') }}-
       - name: Stryker
         run: pnpm ${{ github.event_name == 'schedule' && 'mutate:full' || 'mutate' }}
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

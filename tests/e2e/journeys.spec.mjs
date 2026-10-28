@@ -74,3 +74,86 @@ test("a locked chapter can be played by choice, and stays open", async ({ page }
   await page.getByRole("button", { name: "Map", exact: true }).click();
   await expect(cardFor(page, locked.title).getByRole("button", { name: "Play" })).toBeVisible();
 });
+
+// A host page with its own fixed header (daowolf.com's menu button) sets --sticky-top, and the bar sticks below it.
+// Without it, the bar sticks to the top of the window.
+test("the game's top bar sticks at the host page's --sticky-top offset, or at the top", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Your quest map" })).toBeVisible();
+  const barTop = () => page.locator("header.top").evaluate((el) => el.getBoundingClientRect().top);
+  const setStickyTop = (value) =>
+    page.locator("html").evaluate((html, v) => html.style.setProperty("--sticky-top", v), value);
+  await page.evaluate(() => globalThis.scrollTo({ top: 600, behavior: "instant" }));
+  await expect.poll(() => page.evaluate(() => globalThis.scrollY)).toBeGreaterThan(300);
+  await setStickyTop("initial"); // as if the host page never set it
+  await expect.poll(barTop).toBe(0);
+  await setStickyTop("48px");
+  await expect.poll(barTop).toBe(48);
+});
+
+// daowolf.com puts the game in a flex column with 24px gutters (fixtures/site.css). On a phone that column must stay the screen's width:
+// the top bar fits the game, never the other way round.
+test("on a phone the game fits a host page's flex column, top bar included", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 800 });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Your quest map" })).toBeVisible();
+  await expect.poll(() => page.locator("main").evaluate((main) => main.getBoundingClientRect().width)).toBe(375);
+  expect(await page.locator("header.top").evaluate((bar) => bar.scrollWidth <= bar.clientWidth)).toBe(true);
+  await expect(page.getByRole("button", { name: "👤 You" })).toBeInViewport({ ratio: 1 });
+  await expectShortStat(page);
+});
+
+// The bar shortens by the game's own width, not the window's: a narrow column on a wide screen (daowolf.com between
+// 769px and 1000px) gets the icon-only title instead of one wrapped over three lines.
+test("in a narrow column the top bar shortens by the game's width, not the window's", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Your quest map" })).toBeVisible();
+  await expect(page.locator(".brand span")).toBeVisible();
+  await expect(page.locator(".stat .short")).toBeHidden();
+  await page.locator("main").evaluate((main) => Object.assign(main.style, { flex: "none", width: "448px" }));
+  await expect(page.locator(".brand span")).toBeHidden();
+  await expectShortStat(page);
+});
+
+// The short "/5" shows, and the long form is only there for screen readers. toBeVisible() counts a 1px
+// visually hidden element as visible, so measure the long form instead.
+async function expectShortStat(page) {
+  await expect(page.locator(".stat .short")).toBeVisible();
+  await expect
+    .poll(() => page.locator(".stat .long").evaluate((el) => el.getBoundingClientRect().width))
+    .toBeLessThanOrEqual(1);
+}
+
+// A new screen scrolls the game's top back into view. On a host page with its own header, it must stop at
+// --sticky-top, so the run's bar lands below the game's stuck top bar instead of under it. On a phone, where the
+// challenge is taller than the screen. And at once, though daowolf.com scrolls smoothly: checked straight after the
+// click, not polled, so the next tap never lands on a screen that's still moving.
+test("a new screen scrolls back to the game's top, below the host page's header", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 667 });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Your quest map" })).toBeVisible();
+  // The stand-in page's header offset applies at this width; without it the test proves nothing.
+  expect(
+    await page
+      .locator("system-design-quest")
+      .evaluate((host) => parseFloat(globalThis.getComputedStyle(host).scrollMarginTop)),
+  ).toBeGreaterThan(0);
+  await cardFor(page, quest1.title).getByRole("button", { name: "Play" }).click();
+  await expect(page.locator(".runbar")).toBeVisible();
+  const gap = () =>
+    page.locator("header.top").evaluate((bar) => {
+      const runbar = bar.getRootNode().querySelector(".runbar");
+      return runbar.getBoundingClientRect().top - bar.getBoundingClientRect().bottom;
+    });
+  expect(await gap()).toBeGreaterThanOrEqual(0);
+
+  // Also when the game's top is only partly under the header.
+  await page.getByRole("button", { name: "Map", exact: true }).click();
+  await page
+    .locator("system-design-quest")
+    .evaluate((host) => globalThis.scrollBy({ top: host.getBoundingClientRect().top - 20, behavior: "instant" }));
+  await page.getByRole("button", { name: "Play", exact: true }).first().click();
+  await expect(page.locator(".runbar")).toBeVisible();
+  expect(await gap()).toBeGreaterThanOrEqual(0);
+});

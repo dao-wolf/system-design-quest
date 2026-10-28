@@ -3,17 +3,25 @@ import { app, nextUp, prog } from "../state.js";
 import { h, show } from "../dom.js";
 import { baseEvent, post } from "../store.js";
 import { renderStats } from "../stats.js";
-import { startChapter } from "../play.js";
+import { startChapter, startSingle } from "../play.js";
 import { renderMap } from "./map.js";
 
 // The challenges missed at the first try. The boss isn't a "miss" to replay on its own: a failed boss means
-// replaying the chapter.
+// replaying the chapter. A coach's challenge is written fresh, so it's in no chapter's list (and may have no
+// chapter): it comes from the run itself.
 function missedFirstTime(run, ch) {
+  const pool = run.phase === "single" ? run.queue.map((q) => q.c) : ch.challenges;
   return run.results
     .filter((r) => !r.second)
     .filter((r) => !r.correct && !r.boss)
-    .map((r) => ch.challenges.find((x) => x.id === r.id))
+    .map((r) => pool.find((x) => x.id === r.id))
     .filter(Boolean);
+}
+
+// A coach's challenge replays on its own, as it was set; anything else replays inside its chapter.
+function replayMisses({ ch, missed, single }) {
+  if (single) return startSingle(missed[0], ch);
+  startChapter(ch.slug, missed);
 }
 
 function nextAction({ ch, missed, bossFailed, otherUp }) {
@@ -59,17 +67,14 @@ function missedList(missed) {
 }
 
 // The first button is the one next action; the others are ghosts.
-function resultButtons({ ch, missed, bossFailed, otherUp }) {
+function resultButtons(next) {
+  const { ch, missed, bossFailed, otherUp } = next;
   return h(
     "div",
     { class: "row", style: "margin-top:12px" },
     bossFailed ? h("button", { class: "btn", onclick: () => startChapter(ch.slug) }, `Play ${ch.title}`) : null,
     missed.length
-      ? h(
-          "button",
-          { class: bossFailed ? "btn ghost" : "btn", onclick: () => startChapter(ch.slug, missed) },
-          "Replay the misses",
-        )
+      ? h("button", { class: bossFailed ? "btn ghost" : "btn", onclick: () => replayMisses(next) }, "Replay the misses")
       : null,
     otherUp
       ? h(
@@ -101,6 +106,7 @@ export function showResults() {
   // The recommended chapter, unless it's the one just played.
   const next = {
     ch,
+    single: run.phase === "single",
     missed: missedFirstTime(run, ch),
     bossFailed: run.bossResult != null && run.bossResult < 0.8,
     otherUp: up && up.slug !== ch?.slug ? up : null,

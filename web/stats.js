@@ -36,7 +36,9 @@ export function renderStats() {
       { class: "stat", title: "Days you played, of the last five weekdays. Weekends never count against you." },
       "📅 ",
       h("b", {}, p.weekdays),
-      " of the last 5 weekdays",
+      // A narrow bar shows the short form; screen readers always hear the long one (style.css).
+      h("span", { class: "long" }, " of the last 5 weekdays"),
+      h("span", { class: "short", "aria-hidden": "true" }, "/5"),
     ),
   );
   if (app.combo >= 2) stats.push(comboStat(app.combo));

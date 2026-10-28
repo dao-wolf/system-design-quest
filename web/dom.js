@@ -36,9 +36,20 @@ export function show(...nodes) {
   const s = screen();
   s.replaceChildren(...nodes);
   s.focus({ preventScroll: true });
-  // Bring the top of the game back into view, without jumping past a host page's own header.
+  // Bring the top of the game back into view, below a host page's own header: scroll-margin-top is --sticky-top.
+  // At once, even on a page that scrolls smoothly (daowolf.com): a new screen is like a new page, and the next tap
+  // must land on what the player sees.
   const host = ROOT.host || document.body;
-  if (host.getBoundingClientRect().top < 0) host.scrollIntoView({ block: "start" });
+  const headerHeight = parseFloat(getComputedStyle(host).scrollMarginTop) || 0;
+  if (host.getBoundingClientRect().top < headerHeight) scrollToTop(host);
+}
+function scrollToTop(el) {
+  try {
+    el.scrollIntoView({ block: "start", behavior: "instant" });
+  } catch {
+    // A browser that predates "instant" rejects the option: scroll anyway.
+    el.scrollIntoView(true);
+  }
 }
 export function toast(text) {
   const t = h("div", { class: "toast" }, text);

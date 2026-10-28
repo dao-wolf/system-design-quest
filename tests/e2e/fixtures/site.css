@@ -1,0 +1,39 @@
+/* daowolf.com's global layout rules (src/styles/global.css on its main branch), so the journeys run in the
+   conditions the game meets there: smooth scrolling, a clipped wrapper, a flex column that grows to fit its
+   content unless the content can shrink, the column's padding and --sticky-top below the menu button. */
+:root {
+  --sticky-top: 0px;
+}
+html {
+  scroll-behavior: smooth;
+}
+body {
+  margin: 0;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+.wrapper {
+  min-height: 100vh;
+  overflow-x: clip;
+}
+.layout {
+  display: flex;
+  min-height: 100vh;
+}
+.content {
+  flex: 1;
+  padding: 3rem;
+}
+@media (max-width: 1024px) {
+  .content {
+    padding: 2rem;
+  }
+}
+@media (max-width: 768px) {
+  :root {
+    --sticky-top: 5rem;
+  }
+  .content {
+    padding: 5rem 1.5rem 2rem;
+  }
+}

@@ -6,7 +6,9 @@ export default {
   commandRunner: { command: "node --test tests/engine.test.mjs" },
   coverageAnalysis: "off",
   mutate: ["web/engine.js"],
-  thresholds: { high: 80, low: 60, break: 50 },
+  // A full run scored 72.7% on 28 Oct 2026 (514 of 707 mutants caught). break fails the run below 70, about 19
+  // more survivors; raise it as the tests get stronger. low matches it, so a failing score always shows red.
+  thresholds: { high: 80, low: 70, break: 70 },
   incremental: true,
   incrementalFile: "reports/stryker-incremental.json",
   reporters: ["clear-text", "progress", "html", "json"],

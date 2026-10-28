@@ -28,7 +28,9 @@ knowledge; quests are katas where you design one product end to end.
 
 Keep `style.css` and `chapters.json` next to the script (and
 `element.js.map`, if you want source maps). Add `theme="dark"` or
-`theme="light"` to override the visitor's setting.
+`theme="light"` to override the visitor's setting. If your page has a fixed
+header, set `--sticky-top` to its height (for example
+`:root { --sticky-top: 56px; }`) and the game's top bar sticks below it.
 
 Get the files one of two ways:
 

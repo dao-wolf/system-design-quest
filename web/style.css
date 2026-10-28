@@ -68,6 +68,8 @@
   color: var(--ink);
   font: 16px/1.5 var(--font);
   text-align: left;
+  /* Scrolled back to its top (dom.js show), the game stops below a host page's own header, like the top bar. */
+  scroll-margin-top: var(--sticky-top, 0);
 }
 button {
   font: inherit;
@@ -85,10 +87,14 @@ a {
   color: var(--accent);
 }
 
+/* A host page with its own fixed header sets --sticky-top, so the bar sticks below it instead of under it.
+   The bar is a size container: its contents never widen the game (or a host page's column), and the
+   @container rules below fit them to the bar's own width, which on a host page is narrower than the window. */
 .top {
   position: sticky;
-  top: 0;
+  top: var(--sticky-top, 0);
   z-index: 5;
+  container-type: inline-size;
   display: flex;
   gap: 12px;
   align-items: center;
@@ -120,6 +126,39 @@ a {
 }
 .stat b {
   font-variant-numeric: tabular-nums;
+}
+.stat .short {
+  display: none;
+}
+@container (max-width: 600px) {
+  .brand span {
+    display: none;
+  }
+}
+/* Browsers without container queries (Safari before 16, Firefox before 110) fall back to the window's width. */
+@supports not (container-type: inline-size) {
+  @media (max-width: 600px) {
+    .brand span {
+      display: none;
+    }
+  }
+}
+/* Long form for screen readers only, short form on screen; a long company name in a countdown wraps. */
+@container (max-width: 440px) {
+  .stat {
+    white-space: normal;
+  }
+  .stat .long {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .stat .short {
+    display: inline;
+  }
 }
 .you {
   border: 1px solid var(--line);
@@ -767,9 +806,6 @@ textarea {
   }
   .prompt {
     font-size: 17px;
-  }
-  .brand span {
-    display: none;
   }
 }
 

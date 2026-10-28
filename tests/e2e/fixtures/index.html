@@ -2,13 +2,19 @@
 <html lang="en-GB">
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>System Design Quest: test page</title>
+    <link rel="stylesheet" href="/tests/e2e/fixtures/site.css" />
   </head>
   <body>
-    <main>
-      <h1>A host page</h1>
-      <system-design-quest static theme="dark"></system-design-quest>
-    </main>
+    <div class="wrapper">
+      <div class="layout">
+        <main class="content">
+          <h1>A host page</h1>
+          <system-design-quest static theme="dark"></system-design-quest>
+        </main>
+      </div>
+    </div>
     <script type="module" src="/dist/element.js"></script>
   </body>
 </html>
