@@ -1,5 +1,5 @@
 // Storage: the local server's record, or the browser.
-import { localDay } from "./engine.js";
+import { generate, localDay } from "./engine.js";
 import { app, session } from "./state.js";
 
 // The profile lives in the same place as the answers, and nowhere else: never in the address, the title or a request
@@ -94,4 +94,12 @@ export function baseEvent(kind, extra = {}) {
 export async function post(ev) {
   app.events.push(ev);
   await app.store.add(ev);
+}
+
+// What the record keeps of a response: written text cut to length, and an estimate's worked answer.
+export function summarise(c, res) {
+  const out = { ...res };
+  if (out.text) out.text = String(out.text).slice(0, 4000);
+  if (c.type === "estimate") out.expected = generate(c.generator, res.seed).answer;
+  return out;
 }

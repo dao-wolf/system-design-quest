@@ -3,30 +3,33 @@ import { multiplier } from "./engine.js";
 import { $, app, chapterBySlug, prog } from "./state.js";
 import { confetti, h, toast } from "./dom.js";
 
-export const BADGE_EMOJI = {
+const BADGE_EMOJI = {
   "first-boss": "🏆",
   "combo-5": "🔥",
   "sure-shot": "🎯",
   comeback: "🔁",
   "all-bosses": "👑",
 };
+export const badgeEmoji = (id) => BADGE_EMOJI[id] || "🏅";
+
+// Only with an interview date that hasn't passed.
+function countdown(daysLeft) {
+  const company = app.profile.company;
+  if (daysLeft === 0)
+    return h("span", { class: "stat" }, "🎯 ", h("b", {}, `${company ? `${company} interview` : "Interview"} today`));
+  const to = company || "your interview";
+  return h("span", { class: "stat" }, "⏳ ", h("b", {}, daysLeft), ` day${daysLeft === 1 ? "" : "s"} to ${to}`);
+}
+
+function comboStat(combo) {
+  const times = multiplier(combo);
+  return h("span", { class: "stat combo" }, `🔥 ${combo} in a row${times > 1 ? ` · ×${times}` : ""}`);
+}
 
 export function renderStats() {
   const p = prog();
   const stats = [h("span", { class: "stat" }, "⭐ ", h("b", {}, p.xp.toLocaleString("en-GB")), " XP")];
-  if (p.daysLeft != null && p.daysLeft >= 0) {
-    const to = app.profile.company || "your interview";
-    stats.push(
-      p.daysLeft === 0
-        ? h(
-            "span",
-            { class: "stat" },
-            "🎯 ",
-            h("b", {}, `${app.profile.company ? `${app.profile.company} interview` : "Interview"} today`),
-          )
-        : h("span", { class: "stat" }, "⏳ ", h("b", {}, p.daysLeft), ` day${p.daysLeft === 1 ? "" : "s"} to ${to}`),
-    );
-  }
+  if (p.daysLeft != null && p.daysLeft >= 0) stats.push(countdown(p.daysLeft));
   stats.push(
     h(
       "span",
@@ -36,24 +39,25 @@ export function renderStats() {
       " of the last 5 weekdays",
     ),
   );
-  if (app.combo >= 2)
-    stats.push(
-      h(
-        "span",
-        { class: "stat combo" },
-        `🔥 ${app.combo} in a row${multiplier(app.combo) > 1 ? ` · ×${multiplier(app.combo)}` : ""}`,
-      ),
-    );
+  if (app.combo >= 2) stats.push(comboStat(app.combo));
   $("stats").replaceChildren(...stats);
 }
 
-export function celebrate(before, after, bossBeaten) {
-  if (bossBeaten) confetti();
+function chapterToasts(before, after) {
   for (const [slug, c] of Object.entries(after.chapters)) {
     const b = before.chapters[slug];
     if (c.rank && c.rank !== b.rank) toast(`🎖️ Rank up: ${c.rank}`);
     if (c.unlocked && !b.unlocked) toast(`🔓 Unlocked: ${chapterBySlug(slug).title}`);
   }
+}
+
+function badgeToasts(before, after) {
   for (const badge of after.badges)
-    if (!before.badges.some((x) => x.id === badge.id)) toast(`${BADGE_EMOJI[badge.id] || "🏅"} Badge: ${badge.label}`);
+    if (!before.badges.some((x) => x.id === badge.id)) toast(`${badgeEmoji(badge.id)} Badge: ${badge.label}`);
+}
+
+export function celebrate(before, after, bossBeaten) {
+  if (bossBeaten) confetti();
+  chapterToasts(before, after);
+  badgeToasts(before, after);
 }

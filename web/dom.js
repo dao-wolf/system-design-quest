@@ -2,18 +2,24 @@
 // el.style, which a strict CSP allows.
 import { $, ROOT, clearTimers } from "./state.js";
 
+// null, undefined and false leave an attribute or a child out, so h() can take conditionals inline.
+const isLeftOut = (v) => v == null || v === false;
+
+// "on…" adds a listener; "class" and "style" set properties; anything else is an attribute (true means present).
+function setAttr(el, k, v) {
+  if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+  else if (k === "class") el.className = v;
+  else if (k === "style")
+    el.style.cssText = v; // through the CSS object model, which a strict CSP allows
+  else el.setAttribute(k, v === true ? "" : v);
+}
+
+const toNode = (kid) => (kid instanceof Node ? kid : document.createTextNode(String(kid)));
+
 export function h(tag, attrs = {}, ...kids) {
   const el = document.createElement(tag);
-  for (const [k, v] of Object.entries(attrs || {})) {
-    if (v == null || v === false) continue;
-    if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
-    else if (k === "class") el.className = v;
-    else if (k === "style")
-      el.style.cssText = v; // through the CSS object model, which a strict CSP allows
-    else el.setAttribute(k, v === true ? "" : v);
-  }
-  for (const kid of kids.flat())
-    if (kid != null && kid !== false) el.append(kid instanceof Node ? kid : document.createTextNode(String(kid)));
+  for (const [k, v] of Object.entries(attrs || {})) if (!isLeftOut(v)) setAttr(el, k, v);
+  for (const kid of kids.flat()) if (!isLeftOut(kid)) el.append(toNode(kid));
   return el;
 }
 export const svg = (tag, attrs = {}) => {
@@ -50,6 +56,13 @@ export function confetti() {
   $("toasts").after(box);
   setTimeout(() => box.remove(), 3500);
 }
+// One piece of a line: **bold**, *italic*, or plain text.
+function richPart(part) {
+  if (part.startsWith("**") && part.endsWith("**") && part.length > 4) return h("b", {}, part.slice(2, -2));
+  if (part.startsWith("*") && part.endsWith("*") && part.length > 2) return h("i", {}, part.slice(1, -1));
+  return part;
+}
+
 export function richText(text) {
   // Plain text with **bold**, *italic* and line breaks, built as DOM nodes: nothing is ever parsed as HTML.
   const box = h("div");
@@ -57,13 +70,7 @@ export function richText(text) {
     .split("\n")
     .forEach((line, i) => {
       if (i) box.append(h("br"));
-      for (const part of line.split(/(\*\*.+?\*\*|\*.+?\*)/)) {
-        if (!part) continue;
-        if (part.startsWith("**") && part.endsWith("**") && part.length > 4) box.append(h("b", {}, part.slice(2, -2)));
-        else if (part.startsWith("*") && part.endsWith("*") && part.length > 2)
-          box.append(h("i", {}, part.slice(1, -1)));
-        else box.append(part);
-      }
+      for (const part of line.split(/(\*\*.+?\*\*|\*.+?\*)/)) if (part) box.append(richPart(part));
     });
   return box;
 }
