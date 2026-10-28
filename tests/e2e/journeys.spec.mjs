@@ -74,3 +74,16 @@ test("a locked chapter can be played by choice, and stays open", async ({ page }
   await page.getByRole("button", { name: "Map", exact: true }).click();
   await expect(cardFor(page, locked.title).getByRole("button", { name: "Play" })).toBeVisible();
 });
+
+// A host page with its own fixed header (daowolf.com's menu button) sets --sticky-top, and the bar sticks below it.
+// Without it, the bar sticks to the top of the window.
+test("the game's top bar sticks at the host page's --sticky-top offset, or at the top", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Your quest map" })).toBeVisible();
+  const barTop = () => page.locator("header.top").evaluate((el) => el.getBoundingClientRect().top);
+  await page.evaluate(() => globalThis.scrollTo(0, 600));
+  await expect.poll(() => page.evaluate(() => globalThis.scrollY)).toBeGreaterThan(300);
+  await expect.poll(barTop).toBe(0);
+  await page.locator("html").evaluate((html) => html.style.setProperty("--sticky-top", "48px"));
+  await expect.poll(barTop).toBe(48);
+});

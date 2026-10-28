@@ -85,9 +85,10 @@ a {
   color: var(--accent);
 }
 
+/* A host page with its own fixed header sets --sticky-top, so the bar sticks below it instead of under it. */
 .top {
   position: sticky;
-  top: 0;
+  top: var(--sticky-top, 0);
   z-index: 5;
   display: flex;
   gap: 12px;
