@@ -52,7 +52,12 @@ jobs:
       - name: Install browsers
         run: pnpm exec playwright install --with-deps ${{ github.event_name == 'schedule' && 'chromium firefox webkit' || 'chromium' }}
       - name: Journeys
+        # A bad count must fail, not quietly fall back to one run with retries.
         run: |
+          case "$REPEAT" in
+            [1-9] | 10) ;;
+            *) echo "::error::repeat must be a whole number from 1 to 10, not '$REPEAT'"; exit 1 ;;
+          esac
           if [ "$REPEAT" -gt 1 ]; then pnpm e2e --repeat-each "$REPEAT" --retries 0; else pnpm e2e; fi
         env:
           ALL_BROWSERS: ${{ github.event_name == 'schedule' && '1' || '' }}

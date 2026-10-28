@@ -133,6 +133,12 @@ test("a new screen scrolls back to the game's top, below the host page's header"
   await page.setViewportSize({ width: 375, height: 667 });
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Your quest map" })).toBeVisible();
+  // The stand-in page's header offset applies at this width; without it the test proves nothing.
+  expect(
+    await page
+      .locator("system-design-quest")
+      .evaluate((host) => parseFloat(globalThis.getComputedStyle(host).scrollMarginTop)),
+  ).toBeGreaterThan(0);
   await cardFor(page, quest1.title).getByRole("button", { name: "Play" }).click();
   await expect(page.locator(".runbar")).toBeVisible();
   const gap = () =>
