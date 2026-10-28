@@ -1,0 +1,201 @@
+chapter: 7
+slug: async-failure
+title: Async and failure
+emoji: "📮"
+pillar: Core concepts
+blurb: Move slow work off the request path, and design for the retries, duplicates and slow partners that will happen.
+boss: async-boss
+challenges:
+  - id: async-01
+    type: multi
+    bloom: understand
+    prompt: "A user clicks \"Export my data\". Which are good reasons to put the export on a queue and return a job identifier (ID) straight away?"
+    options:
+      - Traffic spikes wait in the queue instead of overwhelming the servers
+      - The export takes minutes, far longer than a request should be held open
+      - A failed export can be retried without the user waiting on it
+      - It makes the export itself finish sooner
+      - It guarantees each export runs exactly once
+      - Web servers and workers can be scaled separately
+    correct: [0, 1, 2, 5]
+    explain: "A queue splits \"accepted\" from \"done\": the request returns at once, workers drain the backlog at their own pace, and failures retry out of sight. It adds delay and possible duplicates; it doesn't remove them. Say: \"Accept, return a job ID, process in the background.\" For cheap, instant work, stay synchronous."
+    source: https://github.com/donnemartin/system-design-primer
+
+  - id: async-02
+    type: duel
+    bloom: evaluate
+    prompt: "Every \"invoice created\" event must reach the email worker, the analytics warehouse and the search indexer. Next quarter a new team wants to reprocess last week's events. A queue (like Amazon Simple Queue Service, SQS) or a log (like Kafka)?"
+    choices:
+      - "A queue, like SQS: one worker takes each message, then it's deleted"
+      - "A log, like Kafka: events are kept, and each consumer group reads at its own pace"
+    correct: 1
+    reasons:
+      - Each consumer group gets every event, and kept events can be replayed
+      - A log never hands out an event twice
+      - A queue can only have one worker
+    reason: 0
+    costs:
+      - "More to run: partitions, retention and consumer offsets to manage"
+      - Events vanish once the first consumer reads them
+      - Nothing extra
+    cost: 0
+    explain: "A queue gives each message to one worker and deletes it once done: ideal for jobs. A log keeps events for a set period, so three consumer groups each see every event and a new one can start from last week. Say: \"Jobs go on a queue; facts that many readers need go on a log.\""
+    source: https://www.hellointerview.com/learn/system-design/deep-dives/kafka
+
+  - id: async-03
+    type: recall
+    bloom: understand
+    prompt: Setting up a new customer touches three services, each with its own database. Why reach for a saga rather than two-phase commit (2PC)?
+    answer: 2PC makes every service wait on one coordinator, holding its resources, and a coordinator failure can leave them stuck. A saga runs each local step in turn and, if one fails, undoes the finished steps with compensating actions.
+    explain: "Across services with their own databases, 2PC is slow, blocks on its coordinator, and often isn't on offer at all. A saga gives up isolation: in-between states are visible and the result is eventually consistent, so every step and every undo must be safe to retry. Say: \"A saga with compensating steps, run by an orchestrator.\""
+    source: https://docs.aws.amazon.com/prescriptive-guidance/latest/cloud-design-patterns/saga-orchestration.html
+
+  - id: async-04
+    type: fill
+    bloom: apply
+    prompt: Fill the boxes. The export API (application programming interface) returns a job ID at once, the export runs in the background, and a job that keeps failing is set aside for a person to inspect, not retried for ever.
+    diagram:
+      width: 640
+      height: 300
+      nodes:
+        - {id: client, label: Client, x: 20, y: 126}
+        - {id: api, label: Export API, x: 170, y: 126}
+        - {id: jobs, label: Job status table, x: 170, y: 20}
+        - {id: s-queue, label: "?", x: 330, y: 126}
+        - {id: s-workers, label: "?", x: 500, y: 126}
+        - {id: s-dlq, label: "?", x: 330, y: 232}
+        - {id: files, label: File store, x: 500, y: 232}
+      edges:
+        - [client, api, start export]
+        - [api, jobs, "job ID, pending"]
+        - [api, s-queue, job]
+        - [s-queue, s-workers]
+        - [s-workers, files, writes the file]
+        - [s-workers, jobs, marks done]
+        - [s-queue, s-dlq, after 5 failed tries]
+    slots:
+      s-queue: Queue
+      s-workers: Worker pool
+      s-dlq: Dead-letter queue
+    palette:
+      - Queue
+      - Worker pool
+      - Dead-letter queue
+      - Cache
+      - Load balancer
+      - Circuit breaker
+    explain: "The queue absorbs bursts and the worker pool scales on its own. A message that fails every time (a poison message) would otherwise loop for ever, so after a set number of tries it moves to the dead-letter queue (DLQ). Say: \"Retries for blips, a DLQ with an alarm for the rest.\""
+    source: https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-dead-letter-queues.html
+
+  - id: async-05
+    type: order
+    bloom: apply
+    prompt: A worker's call to an outside partner fails. Put a sensible retry policy in order.
+    items:
+      - The call hits its timeout or fails
+      - Retry after a short wait
+      - Retry again, doubling the wait and adding random jitter
+      - Give up after a capped number of tries
+      - Move the message to the dead-letter queue
+      - Alert, fix the cause, then send the messages back
+    explain: "A timeout stops a slow call holding a worker. Backoff gives the partner room to recover, jitter stops every client retrying in the same instant, and the cap surfaces the failure. Retry at one layer only, or the retries multiply. Say: \"Capped exponential backoff with jitter, then the DLQ.\""
+    source: https://aws.amazon.com/builders-library/timeouts-retries-and-backoff-with-jitter/
+
+  - id: async-06
+    type: multi
+    bloom: analyse
+    prompt: The queue delivers at least once, so any message may be processed twice. Which of these consumers are already safe to run twice?
+    options:
+      - Resize an image and save it under a name made from the image's ID
+      - Set an invoice's status to paid
+      - Add the payment's amount to the account balance
+      - Send the invoice email
+      - Append an audit row with a freshly generated ID
+      - Build the monthly report and overwrite that month's file
+    correct: [0, 1, 5]
+    explain: "Setting a value or overwriting a fixed name gives the same result however often it runs. Adding, sending and appending don't. Make those safe with an idempotency key: record the message's ID in the same transaction as the change, and skip IDs already seen. Say: \"At-least-once delivery, so every consumer is idempotent.\""
+    source: https://aws.amazon.com/builders-library/making-retries-safe-with-idempotent-apis/
+
+  - id: async-07
+    type: duel
+    bloom: evaluate
+    prompt: Every invoice calls an outside tax-rate service. It starts taking 30 seconds, then failing. Your servers' threads pile up waiting and the whole app slows down. Best move?
+    choices:
+      - Retry each failed call three times straight away
+      - A short timeout and a circuit breaker, with a fallback rate
+      - Raise the timeout to 60 seconds so calls can finish
+    correct: 1
+    reasons:
+      - After repeated failures it fails fast, freeing threads and letting the partner recover
+      - It makes the partner respond faster
+      - It guarantees no invoice ever fails
+    reason: 0
+    costs:
+      - "While it's open you need a fallback: a cached rate, or \"try again later\""
+      - It doubles the load on the partner
+      - Nothing; it's free
+    cost: 0
+    explain: "Waiting on a dying partner ties up threads until your service fails too. A breaker counts failures, trips, and returns an error at once; after a pause it lets one trial call through. Instant retries pile more load on a struggling service. Say: \"Timeout, breaker, fallback, so their outage stays theirs.\""
+    source: https://martinfowler.com/bliki/CircuitBreaker.html
+
+  - id: async-08
+    type: write
+    bloom: apply
+    prompt: "The invoice service saves an invoice, then publishes \"invoice created\" to the message broker. Sometimes the save works and the publish doesn't. Explain your fix to the interviewer in three or four sentences."
+    key_points:
+      - "Names the problem: two systems written separately, so one can succeed alone"
+      - Writes the invoice and an outbox row in one database transaction
+      - A relay reads the outbox and publishes, retrying until the broker accepts
+      - The relay can publish twice, so consumers are idempotent
+    model: Saving and publishing are two separate writes, so a crash between them loses the event. I'd write the invoice and an outbox row in the same database transaction, so both commit or neither does. A relay reads new outbox rows, publishes them and marks them sent. After a crash it can publish a row twice, so consumers skip event IDs they've already seen.
+    explain: "The dual write is the bug: no transaction spans a database and a broker. The outbox puts the event inside the transaction you already have, and the relay makes publishing at-least-once, never zero. Say: \"Outbox table, relay, idempotent consumers.\""
+    source: https://docs.aws.amazon.com/prescriptive-guidance/latest/cloud-design-patterns/transactional-outbox.html
+
+  - id: async-09
+    type: lightning
+    bloom: understand
+    prompt: When you hear this, reach for what? 90 seconds.
+    pairs:
+      - ["Traffic bursts the workers can't keep up with", "A queue to absorb the burst"]
+      - ["The same message may arrive twice", "An idempotent consumer"]
+      - ["One message fails every single time", "A dead-letter queue"]
+      - ["Thousands of clients retry at the same instant", "Exponential backoff with jitter"]
+      - ["A partner keeps failing and threads pile up", "A circuit breaker"]
+      - ["The queue grows faster than it drains, for hours", "Back pressure: cap the queue, push back"]
+      - ["Save a record and publish an event, both or neither", "The outbox pattern"]
+      - ["Steps across services, each undoable if a later one fails", "A saga with compensating steps"]
+      - ["A job that runs for days and must survive restarts", "A workflow engine, like Temporal"]
+      - ["Every call to a partner needs a limit on waiting", "A timeout"]
+    explain: Each failure has a standard answer, and naming it fast leaves your time for the trade-off. If one was slow, say that pairing out loud, with what it costs, before the next round.
+    source: https://github.com/donnemartin/system-design-primer
+
+  - id: async-boss
+    type: flaw
+    bloom: analyse
+    prompt: "This flow credits customers' accounts from the payment provider's webhooks (calls the provider makes to you). The provider retries until it gets a success response, and the queue delivers at least once. Find the weak box, then pick the fix."
+    diagram:
+      width: 640
+      height: 300
+      nodes:
+        - {id: provider, label: Payment provider, x: 10, y: 126}
+        - {id: hook, label: "Webhook: verify, queue, 200", x: 150, y: 126, w: 150}
+        - {id: queue, label: Queue, x: 330, y: 126}
+        - {id: dlq, label: Dead-letter queue, x: 330, y: 232}
+        - {id: worker, label: Worker adds amount to balance, x: 480, y: 126, w: 150}
+        - {id: db, label: Accounts database, x: 480, y: 232, w: 150}
+      edges:
+        - [provider, hook]
+        - [hook, queue]
+        - [queue, worker]
+        - [queue, dlq, after 5 tries]
+        - [worker, db, balance += amount]
+    flaw: worker
+    fixes:
+      - Record each event's ID with the balance change in one transaction; skip IDs already seen
+      - Add more workers so events are processed faster
+      - Have the webhook update the balance itself before replying 200
+      - Remove the dead-letter queue so no event is set aside
+      - Move the events to a log so they're kept for a week
+    fix: 0
+    explain: "Duplicates are certain here: the provider retries and the queue redelivers. \"Add the amount\" applies every copy, so one payment can credit twice. The provider's event ID is a ready-made idempotency key: store it in the same transaction as the credit, with a unique constraint, and skip repeats. Say: \"Skip repeats by event ID, atomically with the write.\""
+    source: https://aws.amazon.com/builders-library/making-retries-safe-with-idempotent-apis/

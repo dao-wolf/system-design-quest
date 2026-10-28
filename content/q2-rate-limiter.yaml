@@ -1,0 +1,145 @@
+chapter: 10
+slug: rate-limiter
+kind: quest
+title: Rate limiter
+emoji: "🚦"
+pillar: Quests
+builds_on: [1, 2, 5, 6]
+blurb: Cap how often each client can call an API (application programming interface). Requirements, numbers, the interface, the design, deep dives.
+boss: rl-boss
+challenges:
+  - id: rl-01
+    type: sprint
+    bloom: create
+    minutes: 10
+    prompt: "Requirements for a rate limiter (a shared check that caps how many requests each client can make to an API in a period of time). Out loud, against the clock: read it back, who uses it and what they do, your three hard parts, how busy (with the peak), what can't break, what's out."
+    checks:
+      - Read the problem back in one line
+      - "Named both users: clients calling the API, and the teams who set the limits"
+      - "Picked my own three hard parts, such as counting across many servers, adding almost no delay, and surviving a counter outage"
+      - "Asked for the scale and the peak: requests a second, how many clients, how many rules"
+      - "Said what can't break, such as the limiter never taking the API down with it"
+      - Said "I'll assume…" for scope, instead of asking "do you want…?"
+      - "Said what's out of scope, such as billing quotas or blocking network-level floods"
+      - Finished inside the time
+    explain: "A rate limiter sits on every request's path, so the first quarter should settle who is limited, by which key, how strict the count must be and how busy the API gets. The hard parts follow: shared counts, speed and staying up. If a check missed, rehearse that line before the next round. Say: \"I'll assume limits per user or API key, checked on every request, with counts shared across servers.\""
+    source: https://www.hellointerview.com/learn/system-design/problem-breakdowns/distributed-rate-limiter
+
+  - id: rl-02
+    type: estimate
+    bloom: apply
+    prompt: "A public API, and every call passes through the rate limiter first. Estimate the busiest second the limiter must check."
+    generator:
+      kind: peak_rps
+      params:
+        users: [1000000, 100000000]
+        actions: [10, 100]
+    explain: "Calls a day, divided by about 100,000 seconds, times 10 for the peak. Every call costs at least one counter update, so this number sizes the counter store: one Redis node handles very roughly 100,000 simple operations a second, so a big answer means splitting keys across several nodes. Say: \"That many checks a second at the peak, so I'll spread the counters across nodes by key.\""
+    source: https://www.hellointerview.com/learn/system-design/problem-breakdowns/distributed-rate-limiter
+
+  - id: rl-03
+    type: write
+    bloom: apply
+    prompt: "Name the core entities, then sketch the limiter's interface: what a server asks it on each request, and what the client sees when it's over the limit."
+    key_points:
+      - "Entities: a rule (whom it covers, the limit, the window or refill rate) and each key's current count or bucket"
+      - "One check per request: given a key and a rule, return allowed or not, what's left and when it resets"
+      - "The key names the client: a user ID, an API key, an IP address or a tenant"
+      - "Over the limit: status 429 Too Many Requests, with a Retry-After header saying how many seconds to wait"
+      - "Headers on every response give the limit, what's left and the reset time, so clients can slow down early"
+      - Rules sit in config that each server caches in memory, never read from a database per request
+    model: "Entities: Rule (key type, limit, window or refill rate) and Counter (a key's current count or token bucket). Internally, check(key, rule) returns allowed, remaining and reset time. Allowed responses carry headers with the limit, what's left and the reset time, such as X-RateLimit-Remaining. Rejected ones get 429 Too Many Requests with Retry-After: 30 and the same headers; the service behind never sees them."
+    explain: "The limiter answers one question per request, so its interface is tiny: is this key allowed, and how much is left? The client's side matters more: a clear 429 and a Retry-After stop well-behaved clients retrying in a tight loop and making the overload worse. Say: \"One check per request; over the limit, 429 with Retry-After and the remaining-quota headers.\""
+    source: https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/429
+
+  - id: rl-04
+    type: fill
+    bloom: apply
+    prompt: "Land the design end to end. Drag each part into its box: where the check happens before any real work, where counts are shared across servers, and where the limits are defined."
+    diagram:
+      width: 640
+      height: 300
+      nodes:
+        - {id: clients, label: Clients, x: 10, y: 126}
+        - {id: s-gateway, label: "?", x: 230, y: 126}
+        - {id: s-counters, label: "?", x: 450, y: 10}
+        - {id: s-rules, label: "?", x: 450, y: 242}
+        - {id: services, label: API services, x: 510, y: 126}
+      edges:
+        - [clients, s-gateway, every request]
+        - [s-gateway, services, allowed]
+        - [s-gateway, s-counters, count per key]
+        - [s-rules, s-gateway, limits]
+    slots:
+      s-gateway: API gateway with the limiter
+      s-counters: "Redis: a counter per key"
+      s-rules: Rules config, cached locally
+    palette:
+      - API gateway with the limiter
+      - "Redis: a counter per key"
+      - Rules config, cached locally
+      - "Database table: a row per request"
+      - Message queue
+      - Search index
+    explain: "The check runs at the front door, in the API gateway, so a rejected request costs a millisecond and never reaches the expensive services. Counts live in Redis because many gateway servers see the same client; each server keeps the rules in memory and refreshes them now and then. Say: \"The gateway checks a shared Redis counter per key, with rules cached locally, and rejects before any real work.\""
+    source: https://www.hellointerview.com/learn/system-design/problem-breakdowns/distributed-rate-limiter
+
+  - id: rl-05
+    type: duel
+    bloom: evaluate
+    prompt: "Deep dive: ten gateway servers share a Redis counter per API key. Each one reads the count, compares it with the limit, then writes count + 1. Under load, clients get past their limit. What do you change?"
+    choices:
+      - "Check and count in one atomic step: INCR, or a Lua script"
+      - Keep a separate counter in each gateway's memory
+      - Wrap each check in a distributed lock on the key
+    correct: 0
+    reasons:
+      - Redis runs one command or script at a time, so no other server can slip in between
+      - A Lua script is faster than any single command
+      - Atomic steps stop the key from ever expiring
+    reason: 0
+    costs:
+      - "Logic moves into Redis scripts, and a slow script holds up every other check"
+      - Each check needs two network round trips instead of one
+      - Counts reset whenever a gateway restarts
+    cost: 0
+    explain: "Read, compare, write is three steps, so two servers can both read 99 and both let a request through. A single INCR (set its EXPIRE in the same transaction) or a Lua script makes Redis take the whole decision as one step. A lock adds round trips, and local counters each see only a tenth of the traffic. Say: \"Check and count atomically in Redis, in one script per request.\""
+    source: https://redis.io/docs/latest/commands/incr/
+
+  - id: rl-06
+    type: multi
+    bloom: analyse
+    prompt: "Deep dive: every request waits on the counter store, and the API runs in three regions. Which of these keep the limiter fast and available?"
+    options:
+      - Spread counters across Redis nodes by a hash of the key
+      - Give each node a replica that takes over when it fails
+      - Count within each region, accepting a small overshoot of the global limit
+      - Decide per API whether to let requests through or block them when Redis is down
+      - Send every check to one Redis in a single home region
+      - Retry each check until Redis answers, however long that takes
+      - Record every request as a row in the main database
+    correct: [0, 1, 2, 3]
+    explain: "Hashing keys spreads the load, and a replica covers a failure. A cross-ocean check adds tens of milliseconds, so count per region. Failing open (letting requests through) keeps the API up; failing closed guards a fragile backend or a login limit. Endless retries or a row per request turn the limiter into the outage. Say: \"Shard by key, replicate, count per region, fail open or closed per API.\""
+    source: https://www.hellointerview.com/learn/system-design/problem-breakdowns/distributed-rate-limiter
+
+  - id: rl-boss
+    type: duel
+    bloom: evaluate
+    prompt: "Deep dive: pick the algorithm. Each API key gets 100 requests a minute. Short bursts are fine, but nobody should get 200 through in a few seconds, and the counter store holds millions of keys."
+    choices:
+      - "Token bucket: holds 100 tokens, refilled at about 1.7 a second"
+      - "Fixed window: one counter per key for each clock minute"
+      - "Sliding-window log: a timestamp stored for every request"
+    correct: 0
+    reasons:
+      - It allows a burst up to the bucket's size, then holds the average to the refill rate
+      - It is exact to the millisecond, like a log
+      - It needs no state shared between servers
+    reason: 0
+    costs:
+      - "Two settings to tune, and tokens plus a timestamp updated together in one script"
+      - Memory for a timestamp per request
+      - Up to twice the limit around each window boundary
+    cost: 0
+    explain: "A fixed window lets 100 through just before the minute turns and 100 just after: double the limit in two seconds. A log is exact but keeps up to 100 timestamps per key, for millions of keys. A token bucket keeps two numbers, takes a burst up to its size and holds to the refill rate. A sliding-window counter is the other cheap pick. Say: \"Token bucket: bursts up to 100, then about 1.7 a second.\""
+    source: https://www.hellointerview.com/learn/system-design/problem-breakdowns/distributed-rate-limiter

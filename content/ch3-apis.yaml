@@ -1,0 +1,212 @@
+chapter: 3
+slug: apis
+title: APIs and live updates
+emoji: "🔌"
+pillar: Core concepts
+blurb: "APIs (application programming interfaces) over HTTP (Hypertext Transfer Protocol): pick a style, make retries safe, page through lists, stream live updates."
+boss: a-boss
+challenges:
+  - id: a-01
+    type: duel
+    bloom: evaluate
+    prompt: "Two of your own backend services call each other thousands of times a second, and no browser ever uses this path. Which style fits: REST (representational state transfer), GraphQL, or gRPC (a remote procedure call, or RPC, framework)?"
+    choices:
+      - REST, with JSON (JavaScript Object Notation) bodies
+      - GraphQL
+      - gRPC, with Protocol Buffers over HTTP/2
+    correct: 2
+    reasons:
+      - Compact binary messages and generated, typed clients suit busy internal calls
+      - It is the only style that works between two services
+      - Browsers support it better than REST
+    reason: 0
+    costs:
+      - Browsers can't call it directly, and binary messages are harder to eyeball
+      - It can't stream results
+      - Its messages are bigger than JSON
+    cost: 0
+    explain: "gRPC sends Protocol Buffers, a compact binary format, over HTTP/2 and generates typed client code, so busy internal calls get cheaper and safer. REST stays the default for anything public or called from a browser. Say \"REST at the edge, gRPC between services\" and move on: it's worth a mention, not a deep dive."
+    source: https://www.hellointerview.com/learn/system-design/core-concepts/networking-essentials
+
+  - id: a-02
+    type: multi
+    bloom: analyse
+    prompt: Which of these point towards GraphQL rather than REST?
+    options:
+      - Web, mobile and watch apps each need different fields from the same data
+      - One screen would otherwise take five round trips to put together
+      - Responses must be cached by URL (web address) in shared caches
+      - A small public API for outside developers
+      - High-volume calls between two internal services
+      - Clients fetch large objects but only use two fields of each
+    correct: [0, 1, 5]
+    explain: "GraphQL lets each client ask for exactly the fields it needs in one request, which fixes over-fetching and extra round trips. It has costs: one endpoint makes plain HTTP caching harder, nested fields can set off many small queries (the N+1 problem, fixed by batching), and access checks move to each field. Say \"REST by default; GraphQL when clients' needs really differ\"."
+    source: https://www.hellointerview.com/learn/system-design/core-concepts/api-design
+
+  - id: a-03
+    type: write
+    bloom: apply
+    prompt: "Sketch the API for a photo-sharing app: upload a photo, list one person's photos, and like a photo. For each endpoint give the method, the path and what it returns."
+    key_points:
+      - "Plural nouns for resources, e.g. /photos and /users/{id}/photos"
+      - The caller comes from the authentication token, never a user id in the body
+      - Upload with POST and an idempotency key, so a retry doesn't create a second photo
+      - The list is paged with a cursor and returns the next cursor
+      - "Liking can be repeated safely, e.g. PUT /photos/{id}/like"
+      - "Status codes: 201 on create, 401 without a valid token, 404 for a missing photo"
+    model: "POST /photos with an Idempotency-Key header returns 201 and the new photo. GET /users/{id}/photos?cursor=abc&limit=20 returns 200, a page of photos and nextCursor. PUT /photos/{id}/like returns 204; DELETE on the same path removes the like. The caller always comes from the token. 401 without a valid token, 404 if the photo is gone."
+    explain: "Nouns for things and HTTP methods for actions keep an API predictable. Taking the caller from the signed token stops anyone acting as someone else by editing a field in the body. Say \"the user comes from the token\" as you write each endpoint: interviewers listen for it."
+    source: https://www.hellointerview.com/learn/system-design/in-a-hurry/delivery
+
+  - id: a-04
+    type: multi
+    bloom: understand
+    prompt: "Which HTTP methods are idempotent: sending the same request twice leaves the server as one request would?"
+    options:
+      - GET
+      - POST
+      - PUT
+      - DELETE
+      - PATCH
+      - HEAD
+    correct: [0, 2, 3, 5]
+    explain: "GET and HEAD only read. PUT sets a resource to a given state. DELETE removes it, and a second DELETE may answer 404 but changes nothing more. POST creates something new each time, and PATCH isn't guaranteed safe to repeat (think \"add 1 to the count\"). Retry the idempotent ones freely; give POST an idempotency key."
+    source: https://developer.mozilla.org/en-US/docs/Glossary/Idempotent
+
+  - id: a-05
+    type: duel
+    bloom: evaluate
+    prompt: A client sends POST /invoices. The response times out, the client retries, and the customer now has two identical invoices. What's the fix?
+    choices:
+      - The client sends a unique key; the server replays the first result for repeats
+      - Turn off retries in the client
+      - Wait longer before retrying
+      - Skip any new invoice that looks like a recent one
+    correct: 0
+    reasons:
+      - A retry with the same key gets the stored first answer, so nothing is made twice
+      - POST is idempotent already, so the key is only for logs
+      - Keys make each request faster
+    reason: 0
+    costs:
+      - The server stores each key and its result for a while and checks it on every create
+      - Clients can never retry again
+      - Every invoice needs a manual check
+    cost: 0
+    explain: "A timeout doesn't tell the client whether the invoice was made, so retrying is right, and POST isn't idempotent. A unique key per attempt (an idempotency key) lets the server spot a repeat and replay the first answer. Guessing from the contents would drop genuine look-alikes. Say \"POST with an idempotency key, kept for a day or so\"."
+    source: https://www.hellointerview.com/learn/system-design/core-concepts/api-design
+
+  - id: a-06
+    type: duel
+    bloom: evaluate
+    prompt: "A photo app's home timeline gets new posts every second while people scroll down it. The list endpoint takes ?offset=40&limit=20. What do you change?"
+    choices:
+      - Keep offset paging, because it's simpler
+      - "Switch to a cursor: an opaque token for the last item seen"
+      - Return the whole timeline in one response
+    correct: 1
+    reasons:
+      - New posts shift every offset, so pages repeat or skip items; a cursor sticks to an item
+      - Cursors are part of the REST standard
+      - Offset responses can't be cached
+    reason: 0
+    costs:
+      - You can't jump straight to page 37
+      - Readers see more repeated posts
+      - The client downloads every post
+    cost: 0
+    explain: "With offsets, ten new posts at the top push everything down, so the next page repeats ten the reader has already seen. A cursor means \"after this item\" and stays put. Offsets are fine for lists that rarely change, such as search results. Say \"cursor paging, because the list changes while people scroll\"."
+    source: https://www.hellointerview.com/learn/system-design/core-concepts/api-design
+
+  - id: a-07
+    type: lightning
+    bloom: remember
+    prompt: "Status codes. You hear what happened; give the code. 90 seconds."
+    seconds: 90
+    pairs:
+      - ["A POST made a new resource", "201 Created"]
+      - ["The delete worked and there's nothing to send back", "204 No Content"]
+      - ["Your cached copy is still current", "304 Not Modified"]
+      - ["The request body is malformed", "400 Bad Request"]
+      - ["No token, or the token isn't valid", "401 Unauthorized"]
+      - ["Signed in, but not allowed to see this", "403 Forbidden"]
+      - ["There's no such resource", "404 Not Found"]
+      - ["The client is calling too often", "429 Too Many Requests"]
+      - ["An unhandled error on the server", "500 Internal Server Error"]
+      - ["The server is overloaded or down for maintenance; try later", "503 Service Unavailable"]
+    explain: "4xx codes mean the caller must change something; 5xx mean the server failed and a retry may work. 401 means \"who are you?\", 403 means \"I know who you are, and no\". If one tripped you, say its pair aloud: 401 versus 403 is the usual slip."
+    source: https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status
+
+  - id: a-08
+    type: sticker
+    bloom: apply
+    prompt: A web app and a mobile app reach your services through one front door. Put each job on the box that should do it.
+    diagram:
+      width: 640
+      height: 300
+      nodes:
+        - {id: web, label: Web app, x: 20, y: 60}
+        - {id: mob, label: Mobile app, x: 20, y: 190}
+        - {id: gw, label: API gateway, x: 250, y: 125}
+        - {id: photos, label: Photo service, x: 490, y: 40}
+        - {id: search, label: Search service, x: 490, y: 125}
+        - {id: accounts, label: Account service, x: 490, y: 210}
+      edges:
+        - [web, gw]
+        - [mob, gw]
+        - [gw, photos]
+        - [gw, search]
+        - [gw, accounts]
+    stickers:
+      - Check the access token
+      - Rate-limit each client
+      - Route by URL path
+      - Decrypt incoming HTTPS
+      - Check who may see this photo
+      - Rank search results
+    answers:
+      gw: [Check the access token, Rate-limit each client, Route by URL path, Decrypt incoming HTTPS]
+      photos: [Check who may see this photo]
+      search: [Rank search results]
+    explain: "The gateway does the jobs every request needs: decrypting HTTPS (encrypted HTTP), checking who is calling, limiting how often, and routing by path. Rules about one photo, or how to rank results, need a service's own data, so they stay in that service. Say \"a gateway for routing, authentication and rate limits\" in one line, then move on."
+    source: https://www.hellointerview.com/learn/system-design/deep-dives/api-gateway
+
+  - id: a-09
+    type: multi
+    bloom: analyse
+    prompt: Which of these really need WebSockets (two-way, always open) rather than server-sent events (SSE, one-way from the server) or polling?
+    options:
+      - Several people editing one document, keystrokes flowing both ways
+      - A browser game sending each player's moves many times a second
+      - A sales dashboard that refreshes every 5 minutes
+      - Showing the progress of a large file export
+      - Streaming a chatbot's answer word by word
+      - A shared whiteboard where everyone's pen strokes appear live
+    correct: [0, 1, 5]
+    explain: "WebSockets earn their cost when clients send often as well as receive: shared editing, games, whiteboards. Each connection is stateful, which makes load balancing and deploys harder. One-way streams suit SSE; slow refreshes suit plain polling. Ask \"does the client send often?\" If not, SSE or polling."
+    source: https://www.hellointerview.com/learn/system-design/core-concepts/networking-essentials
+
+  - id: a-boss
+    type: duel
+    bloom: evaluate
+    prompt: "A build dashboard shows live progress to 20,000 viewers. Updates come every few seconds, and viewers never send anything back. A colleague proposes WebSockets. What do you choose?"
+    choices:
+      - WebSockets, as proposed
+      - Server-sent events
+      - Polling every second
+      - Long polling
+    correct: 1
+    reasons:
+      - Updates flow one way, and SSE does that over ordinary HTTP, reconnecting by itself
+      - SSE lets viewers send commands back, like WebSockets
+      - SSE needs no open connection at all
+      - Browsers block WebSockets on dashboards
+    reason: 0
+    costs:
+      - "Each viewer keeps a connection open: 20,000 long-lived connections to run"
+      - Updates arrive later than with polling
+      - Each viewer can only get one update
+      - Every proxy on the path must support a new protocol
+    cost: 0
+    explain: "WebSockets bring two-way traffic you won't use, and every proxy on the path must allow the upgrade. Polling every second means 20,000 requests a second that mostly say \"nothing new\"; long polling cuts that but reconnects after every update. SSE fits a one-way stream. Say \"One-way, so SSE. I'll watch connection counts and let clients resume from the last update.\""
+    source: https://www.hellointerview.com/learn/system-design/core-concepts/networking-essentials

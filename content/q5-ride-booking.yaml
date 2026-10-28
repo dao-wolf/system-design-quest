@@ -1,0 +1,153 @@
+chapter: 13
+slug: ride-booking
+kind: quest
+title: Ride booking (like Uber)
+emoji: "🚗"
+pillar: Quests
+builds_on: [1, 3, 6, 8]
+blurb: Pair riders with nearby drivers in seconds. Requirements, numbers, entities and calls, the design, then live location, surge pricing and one-to-one matching.
+boss: rb-boss
+challenges:
+  - id: rb-01
+    type: sprint
+    bloom: create
+    minutes: 10
+    prompt: "Requirements for a ride-booking app (a rider asks for a car, a nearby driver accepts, and both follow the trip live). Out loud, against the clock: read it back, both kinds of user and what they do, your three hard parts, how busy (with the peak), what can't break, what's out."
+    checks:
+      - Read the problem back in one line
+      - "Named both users: riders who get a price, book and track a ride, and drivers who go online, accept and drive"
+      - "Picked my own three hard parts, such as constant location updates, one-to-one matching, and rush-hour peaks"
+      - "Gave the scale and the peak: drivers online, a ping every few seconds, rush hour and big events"
+      - "Said what can't break: one driver per ride, one ride per driver, and the rider charged once"
+      - 'Said "I''ll assume…" for scope, instead of asking "do you want…?"'
+      - "Said what's out of scope, such as shared rides, booking ahead or signing drivers up"
+      - Finished inside the time
+    explain: "Ride booking has two live sides: drivers report their position all the time, and riders expect a match within seconds. Naming that early, with peaks by area and time, sets up every later choice. Correctness lives in matching and payment, so say those out loud. If a check missed, rehearse that line before the next round. Say: \"Two live sides, constant location, and one driver per ride.\""
+    source: https://www.hellointerview.com/learn/system-design/problem-breakdowns/uber
+
+  - id: rb-02
+    type: estimate
+    bloom: apply
+    prompt: "Drivers' phones send their location every few seconds through a shift. Estimate the location writes a second at the peak, then say whether one database copes."
+    generator:
+      kind: shard_or_not
+      params:
+        users: [100000, 2000000]
+        writes: [2000, 10000]
+    explain: "Drivers × pings a day, divided by about 100,000 seconds, times 10 for the peak. A ping every 5 seconds over 8 hours is about 5,760 a day, so even 100,000 drivers pass 10,000 writes a second at the peak. Each point is stale seconds later, so don't keep every ping: hold each driver's latest point in memory, split by area. Say: \"Hot, short-lived writes, so memory, not the main database.\""
+    source: https://www.hellointerview.com/learn/system-design/problem-breakdowns/uber
+
+  - id: rb-03
+    type: write
+    bloom: apply
+    prompt: "Name the core entities, then sketch the application programming interface (API): get a fare estimate, request a ride, send a driver's location, accept or decline an offer, and follow the ride's status."
+    key_points:
+      - "Entities: rider, driver, ride (pickup, drop-off, fare, driver, status) and each driver's latest location"
+      - "POST /fares with pickup and drop-off returns a price and a quote ID that expires after a few minutes"
+      - POST /rides with the quote ID creates the ride as requested and starts matching
+      - "POST /drivers/location every few seconds; POST /rides/{id}/accept or /decline answers an offer"
+      - "GET /rides/{id} gives the status, and changes are pushed over a WebSocket or server-sent events (SSE)"
+      - "Rider and driver come from the token, never the request body"
+    model: "Entities: Rider, Driver, Ride (pickup, drop-off, quote, driver, status) and Location (driver, point, time). POST /fares returns a price and a quote ID. POST /rides with that ID creates a requested ride. The driver's app sends POST /drivers/location every few seconds and answers offers with POST /rides/{id}/accept or /decline. GET /rides/{id} returns the status, also pushed live. Rider and driver come from the token."
+    explain: "Five calls carry the product. Name the ride's states early: requested, matched, driver arriving, in progress, then completed or cancelled. Payment runs once, on completed, with the ride ID as an idempotency key so a retry can't charge twice. Taking the person from the token stops one user acting as another. Say: \"Entities first; the ride's status is a state machine.\""
+    source: https://www.hellointerview.com/learn/system-design/problem-breakdowns/uber
+
+  - id: rb-04
+    type: fill
+    bloom: apply
+    prompt: "Land the design end to end. Drag each part into its box: what pairs riders with drivers, where drivers' latest positions live, the record of every ride, and how the rider's screen stays current."
+    diagram:
+      width: 640
+      height: 300
+      nodes:
+        - {id: driver, label: Driver app, x: 10, y: 20}
+        - {id: loc, label: Location service, x: 260, y: 20}
+        - {id: s-geo, label: "?", x: 510, y: 126}
+        - {id: rider, label: Rider app, x: 10, y: 126}
+        - {id: s-match, label: "?", x: 260, y: 126}
+        - {id: s-live, label: "?", x: 10, y: 232}
+        - {id: s-db, label: "?", x: 260, y: 232}
+      edges:
+        - [driver, loc, ping]
+        - [loc, s-geo, latest point]
+        - [rider, s-match, request ride]
+        - [s-match, s-geo, nearest free]
+        - [s-match, driver, offer]
+        - [s-match, s-db]
+        - [s-match, s-live, status change]
+        - [s-live, rider]
+    slots:
+      s-match: Matching service
+      s-geo: In-memory geo index
+      s-db: Rides database
+      s-live: Live updates (WebSocket or SSE)
+    palette:
+      - Matching service
+      - In-memory geo index
+      - Rides database
+      - Live updates (WebSocket or SSE)
+      - Message queue
+      - Data warehouse
+      - Content delivery network
+    explain: "Pings overwrite each driver's latest point in an in-memory geo index. The matching service asks it for the nearest free drivers, offers the ride to one, and keeps the ride and its state in the database. Status changes go out over a live channel, so the rider app never polls. Give each box its reason as you place it. Say: \"Location, matching, the ride record, live status.\""
+    source: https://www.hellointerview.com/learn/system-design/problem-breakdowns/uber
+
+  - id: rb-05
+    type: duel
+    bloom: evaluate
+    prompt: "Rush hour, and a concert has just ended: in one district, riders outnumber free drivers ten to one. Every fare quote must show that area's current surge multiplier. How do you produce it?"
+    choices:
+      - "A job recomputes each area's multiplier every minute; quotes read it from a cache"
+      - Count riders and free drivers in the area on every quote
+      - Set one multiplier per city each morning
+    correct: 0
+    reasons:
+      - A quote becomes one cheap lookup, however many riders ask at once
+      - Counting on every quote costs nothing when the index is in memory
+      - A cached multiplier is exact to the second
+    reason: 0
+    costs:
+      - The price trails demand by up to a minute
+      - Each quote searches the location index, so work grows with the crowd
+      - Riders can't see a price before booking
+    cost: 0
+    explain: "Demand spikes by place and time, so counting supply and demand on every quote adds the most work just as the crowd arrives. Recompute each area's multiplier on a short schedule from recent requests and free drivers, and serve it as a cached read. Save it in the quote, so the rider pays the price they saw. Say: \"Surge is a precomputed read per area, refreshed every minute.\""
+    source: https://en.wikipedia.org/wiki/Dynamic_pricing
+
+  - id: rb-06
+    type: multi
+    bloom: analyse
+    prompt: "Drivers worldwide send their position every few seconds, and matching asks for free drivers near each pickup. Which of these keep the location index fast and accurate?"
+    options:
+      - Keep only each driver's latest point, overwriting the one before
+      - Treat a driver who hasn't pinged for about 30 seconds as gone
+      - "Split the index by area, such as city or geohash cell, each shard serving its region"
+      - Ping less often while a driver is parked, more often on the move
+      - Insert every ping as a new row in the rides database
+      - Cache each area's list of nearby drivers for an hour
+      - Run one global index on a single machine
+    correct: [0, 1, 2, 3]
+    explain: "Only the newest point matters, so overwrite it in memory and let silent drivers drop out after a short expiry. Splitting by area keeps writes and searches local. Pinging less while parked cuts writes. A cached list goes stale as drivers move, a row per ping swamps the database, and one machine can't keep up. Say: \"Latest point, in memory, split by area, with an expiry.\""
+    source: https://www.hellointerview.com/learn/system-design/problem-breakdowns/uber
+
+  - id: rb-boss
+    type: duel
+    bloom: evaluate
+    prompt: "Deep dive: matching. Each driver sees one offer at a time, each ride goes to one driver at a time, and a driver has 10 seconds to answer. Many matching servers run at once. How do you make sure no driver gets two offers, and the ride keeps moving?"
+    choices:
+      - "Lock the driver for 10 seconds before offering; on a no or a timeout, try the next nearest"
+      - Offer the ride to the five nearest drivers and take the first to accept
+      - "Check the driver's status says free, then send the offer"
+    correct: 0
+    reasons:
+      - "Taking the lock is one atomic step, so only one server wins, and it frees itself"
+      - Locks make drivers answer faster
+      - Checking the status first is already atomic
+    reason: 0
+    costs:
+      - "Each ignored offer costs the rider 10 seconds, and the lock store must stay up"
+      - A driver can still get two offers at once
+      - Rides can no longer be cancelled
+    cost: 0
+    explain: "Checking \"free\" then offering lets two servers pick the same driver. Claim the driver in one atomic step with a time limit: set a key only if none exists, expiring in 10 seconds. Accepting moves the ride from requested to matched with a conditional write, so it never gets two drivers. A no or a timeout frees the driver for the next offer. Say: \"An expiring lock per driver, one offer at a time.\""
+    source: https://redis.io/docs/latest/develop/clients/patterns/distributed-locks/

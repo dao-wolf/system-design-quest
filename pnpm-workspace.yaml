@@ -1,0 +1,16 @@
+# Project settings for pnpm (a single package, not a workspace).
+
+# Refuse package versions published less than a day ago (in minutes), so a
+# compromised release is likely to be caught and pulled first.
+minimumReleaseAge: 1440
+
+# Install scripts run only for packages listed here; any other package that
+# wants one fails the install, so nothing runs unreviewed.
+strictDepBuilds: true
+onlyBuiltDependencies: []
+
+# Security fixes for dev-only packages pulled in by other tools. Remove an
+# entry once the tool that needs it ships the fixed version itself.
+overrides:
+  # Via Stryker (typed-rest-client); denial-of-service fixes in 6.16.1.
+  qs: ">=6.16.1"

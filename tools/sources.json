@@ -1,0 +1,22 @@
+{
+  "note": "Public sources a challenge may cite. A source must start with one of these prefixes. Facts only: never copy their text.",
+  "prefixes": [
+    "https://www.hellointerview.com/learn/system-design/",
+    "https://www.hellointerview.com/blog/",
+    "https://github.com/donnemartin/system-design-primer",
+    "https://bytebytego.com/",
+    "https://en.wikipedia.org/wiki/",
+    "https://martinfowler.com/",
+    "https://aws.amazon.com/",
+    "https://docs.aws.amazon.com/",
+    "https://www.postgresql.org/docs/",
+    "https://redis.io/docs/",
+    "https://kafka.apache.org/",
+    "https://grpc.io/",
+    "https://graphql.org/",
+    "https://developer.mozilla.org/",
+    "https://sre.google/",
+    "https://www.rfc-editor.org/",
+    "https://datatracker.ietf.org/"
+  ]
+}

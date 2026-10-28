@@ -1,0 +1,197 @@
+chapter: 5
+slug: caching-scaling
+title: Caching and scaling
+emoji: "⚡"
+pillar: Core concepts
+blurb: Pick a caching pattern, keep it fresh, survive hot keys and stampedes, then scale out with replicas, shards and consistent hashing.
+boss: scal-boss
+challenges:
+  - id: scal-01
+    type: sticker
+    bloom: understand
+    prompt: Three ways to put a cache in front of a database. Stick each trait on the pattern it belongs to.
+    diagram:
+      width: 640
+      height: 200
+      nodes:
+        - {id: aside, label: Cache-aside, x: 40, y: 76}
+        - {id: through, label: Write-through, x: 260, y: 76}
+        - {id: back, label: Write-back, x: 480, y: 76}
+    stickers:
+      - App fills the cache on a miss
+      - Only data that's read gets cached
+      - Each write waits for cache and database
+      - Fastest writes
+      - A cache crash can lose writes
+    answers:
+      aside: [App fills the cache on a miss, "Only data that's read gets cached"]
+      through: [Each write waits for cache and database]
+      back: [Fastest writes, A cache crash can lose writes]
+    explain: "Cache-aside is the usual default: the app reads the cache, and on a miss loads from the database and fills it. Write-through keeps the cache current but makes each write wait for both. Write-back (also called write-behind) answers from the cache and flushes later: fast, but a crash loses whatever hadn't flushed. Name the pattern and why in one sentence."
+    source: https://github.com/donnemartin/system-design-primer
+
+  - id: scal-02
+    type: duel
+    bloom: evaluate
+    prompt: Product pages are cached with cache-aside and read thousands of times a minute; a page changes a few times a day. When someone edits a page, what does the write path do?
+    choices:
+      - Update the database, then delete the cached copy
+      - Update the database and wait for the cached copy to expire
+      - Update the cache now and the database later
+    correct: 0
+    reasons:
+      - The next read reloads from the database, so no second copy needs updating
+      - A cache can never serve stale data
+      - Writing the cache first makes the database optional
+    reason: 0
+    costs:
+      - One extra miss per edit, and a brief window where a reader may see the old page
+      - Readers see the old page for up to an hour
+      - Edits can be lost if the cache crashes
+    cost: 0
+    explain: "Deleting on write keeps one source of truth, and the next read refills the cache. Keep an expiry (TTL, time to live) on every key anyway, so a missed delete corrects itself. Waiting for expiry shows stale pages for the whole TTL; writing the cache first risks lost edits. Say: \"Write the database, delete the key, TTL as a safety net.\""
+    source: https://aws.amazon.com/caching/best-practices/
+
+  - id: scal-03
+    type: multi
+    bloom: analyse
+    prompt: The home page's cached data is read 50,000 times a second. Each time its key expires, thousands of requests miss at once and the database falls over. Which fixes help?
+    options:
+      - Let one request rebuild the value while the rest wait for its result
+      - Refresh the value in the background just before it expires
+      - Shorten the expiry so the value is always fresh
+      - Add app servers to absorb the extra misses
+      - Turn the cache off while the value rebuilds
+    correct: [0, 1]
+    explain: "This is a cache stampede: one popular key expires and every request rebuilds it at once. Coalescing lets one request rebuild while the rest share its answer; refreshing early means the key never expires under load. A shorter expiry brings stampedes more often, and more app servers don't shield the database. Say: \"Coalesce the rebuild, and refresh the hottest keys early.\""
+    source: https://www.hellointerview.com/learn/system-design/core-concepts/caching
+
+  - id: scal-04
+    type: recall
+    bloom: analyse
+    prompt: A deploy cached 50,000 product pages in the same minute, all with a one-hour TTL. Now database load spikes at that same minute every hour. Why, and what's the fix?
+    answer: They all expire together, so the misses arrive in one burst. Add a random offset to each TTL (an hour plus up to a couple of minutes) so expiries spread out.
+    explain: "Identical expiry times line the misses up into one spike. Random jitter on each TTL spreads them into a trickle, at almost no cost. Say: \"TTL plus a little jitter, so popular keys don't all expire at once.\""
+    source: https://aws.amazon.com/caching/best-practices/
+
+  - id: scal-05
+    type: duel
+    bloom: evaluate
+    prompt: One viral video's details are read 300,000 times a second. The Redis node that owns that key is maxed out while the other nodes sit idle. Best move?
+    choices:
+      - Keep several copies under suffixed keys and read a random one
+      - Add more nodes to the Redis cluster
+      - Give the key a shorter expiry
+    correct: 0
+    reasons:
+      - One key always lands on one node, so new nodes never share its load
+      - Short expiries spread a key across nodes
+      - Redis gets faster as keys get shorter
+    reason: 0
+    costs:
+      - An update must reach every copy, or readers briefly disagree
+      - Reads get slower for every other key
+      - None
+    cost: 0
+    explain: "A hot key overloads the one node that owns it, however big the cluster. Copies under keys like video42-1 to video42-8 spread reads over several nodes, and a small in-process cache on each app server helps too. The cost is updating every copy. Say: \"Hot key, so I'll copy it and spread the reads.\""
+    source: https://www.hellointerview.com/learn/system-design/deep-dives/redis
+
+  - id: scal-06
+    type: lightning
+    bloom: remember
+    prompt: "When you hear this, reach for what? 90 seconds."
+    pairs:
+      - ["Images and scripts for users all over the world", "A CDN (content delivery network)"]
+      - ["Users are logged out when one server restarts", "Stateless servers, sessions in a shared store"]
+      - ["The biggest machine size is already bought", "Scale out: add more machines"]
+      - ["Reads outgrow one database; writes are fine", "Read replicas"]
+      - ["Writes or data outgrow one database", "Shard the data"]
+      - ["Adding a cache node reshuffles almost every key", "Consistent hashing"]
+      - ["Writes must be very fast; losing a few is acceptable", "Write-back (write-behind) cache"]
+      - ["The same data is read again and again", "Cache-aside in front of the database"]
+    explain: "Each symptom has a standard first move. Scaling up (a bigger machine) is simplest but hits a ceiling and stays one point of failure; scaling out needs stateless servers so any of them can take any request. Say the symptom, then the move: \"Reads are the bottleneck, so replicas.\""
+    source: https://github.com/donnemartin/system-design-primer
+
+  - id: scal-07
+    type: write
+    bloom: analyse
+    prompt: You added read replicas. Now a user edits their profile, refreshes, and sees the old version for a second or two. Explain what's going on and how you'd fix it.
+    key_points:
+      - Replicas copy from the primary asynchronously, so they run a little behind
+      - The refresh read hit a replica that hadn't caught up yet
+      - "Read-your-own-writes: send that user's reads to the primary for a short while after a write"
+      - Other users keep reading replicas; slight staleness is fine for them
+      - "The cost: some read load returns to the primary"
+    model: "Replication is asynchronous, so a replica can be a second behind, and the refresh landed on one that hadn't caught up. I'd give the author read-your-own-writes: for a few seconds after an edit, their own reads go to the primary. Everyone else keeps reading replicas, where a second of staleness is fine. The cost is a little extra load on the primary."
+    explain: "Replication lag is normal; the person who just wrote is the one who notices it. Sending only their reads to the primary fixes what they see without giving up the replicas, and adding replicas doesn't remove the lag. Say: \"Read-your-own-writes for the author, replicas for everyone else.\""
+    source: https://www.hellointerview.com/learn/system-design/core-concepts/cap-theorem
+
+  - id: scal-08
+    type: duel
+    bloom: apply
+    prompt: "An invoicing product's invoices table has outgrown one database. Most queries ask for \"this customer's invoices\". What's the shard key?"
+    choices:
+      - The customer's identifier
+      - The date the invoice was created
+      - Paid or unpaid
+    correct: 0
+    reasons:
+      - Many distinct values spread load evenly, and the main query hits one shard
+      - Recent invoices sit together, which speeds up every write
+      - Few distinct values keep routing simple
+    reason: 0
+    costs:
+      - One huge customer can make its shard hot
+      - All new writes land on the newest shard
+      - Every query must visit every shard
+    cost: 0
+    explain: "A good shard key has many values, spreads load evenly and fits the main query. A date sends every new write to one shard; a yes-or-no field gives two shards at most. The customer key's risk is a hot partition from one giant customer: give it its own shard. Reports across all customers now hit every shard, so precompute them. Say the key and its risk together."
+    source: https://www.hellointerview.com/learn/system-design/core-concepts/sharding
+
+  - id: scal-09
+    type: multi
+    bloom: analyse
+    prompt: Ten cache servers place keys with hash(key) mod 10. You add an eleventh and switch to mod 11. Which of these are true?
+    options:
+      - About 90% of keys now belong to a different server
+      - The cache hit rate drops sharply until it refills
+      - With consistent hashing, only about 1 key in 11 would move
+      - With mod N, only the keys bound for the new server move
+      - Consistent hashing moves no keys at all
+    correct: [0, 1, 2]
+    explain: "With mod N, changing N changes almost every key's remainder: about 10 keys in 11 move, and the cache goes nearly cold. On a consistent-hashing ring, a new server takes only the keys between it and its neighbour, about 1 in 11. Say: \"Consistent hashing, so adding a node moves about a tenth of the keys, not nine tenths.\""
+    source: https://en.wikipedia.org/wiki/Consistent_hashing
+
+  - id: scal-boss
+    type: flaw
+    bloom: evaluate
+    prompt: "Fix this at ten times the load. A link shortener: reads come from the cache and replicas, and the primary database already runs at 70% busy on today's writes alone. Find the box that breaks first, then pick the fix."
+    diagram:
+      width: 640
+      height: 300
+      nodes:
+        - {id: users, label: Users, x: 20, y: 126}
+        - {id: cdn, label: "CDN: site assets", x: 170, y: 20}
+        - {id: lb, label: Load balancer, x: 170, y: 126}
+        - {id: cache, label: Redis cluster, x: 320, y: 20}
+        - {id: app, label: Stateless app servers, x: 320, y: 126}
+        - {id: primary, label: "Primary: all writes", x: 480, y: 126}
+        - {id: replicas, label: Read replicas x3, x: 480, y: 232}
+      edges:
+        - [users, cdn, assets]
+        - [users, lb]
+        - [lb, app]
+        - [app, cache, link lookups]
+        - [app, primary, new links]
+        - [primary, replicas, copies]
+        - [app, replicas, cache misses]
+    flaw: primary
+    fixes:
+      - Shard by short code with consistent hashing; each shard keeps its own replicas
+      - Add more read replicas
+      - Add more stateless app servers
+      - Grow the Redis cluster
+      - Move the primary to a machine twice the size
+    fix: 0
+    explain: "Reads already scale out through the CDN, cache and replicas, but every write still goes through one primary, and ten times 70% is seven machines' worth. Replicas add read capacity, not write capacity; a machine twice the size covers two. Shard by short code, which every lookup carries, with consistent hashing so later shards move few keys. Say: \"Writes are the wall, so shard.\""
+    source: https://www.hellointerview.com/learn/system-design/core-concepts/sharding

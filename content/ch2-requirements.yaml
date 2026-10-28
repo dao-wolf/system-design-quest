@@ -1,0 +1,151 @@
+chapter: 2
+slug: requirements
+title: Requirements and numbers
+emoji: "🟣"
+pillar: Core concepts
+blurb: Turn a vague brief into numbers. Functional versus non-functional, sizing for the peak, and the yardsticks you do the sums with.
+boss: r-boss
+challenges:
+  - id: r-01
+    type: multi
+    bloom: analyse
+    prompt: A cloud documents app. Which of these non-functional requirements could you actually test as written?
+    options:
+      - The app should be fast
+      - Opening a document takes under 300 ms (milliseconds) for 99% of requests
+      - The system should be highly available
+      - Up 99.9% of the time, so at most about 9 hours down a year
+      - A saved edit survives the loss of a whole data centre
+      - Other readers see an edit within 2 seconds
+      - It should scale well
+      - Users can share a document with a link
+    correct: [1, 3, 4, 5]
+    explain: "A figure can be checked and drives a decision; \"fast\", \"highly available\" and \"scales well\" can't. Sharing a link is a functional requirement, not a quality. Fix: give each quality a number (a latency for 99% of requests, nines of availability, what loss is tolerable, how stale a read may be). Say \"the system should open a document in under 300 ms for 99% of requests\"."
+    source: https://www.hellointerview.com/learn/system-design/in-a-hurry/delivery
+
+  - id: r-02
+    type: recall
+    bloom: understand
+    prompt: Why size a system for its busiest second rather than the daily average?
+    answer: Traffic bunches into busy hours and spikes. A system built for the average falls over exactly when most people use it. Work out the average, multiply by a peak factor, and say the factor out loud.
+    explain: "An average hides the evening rush, a launch or a post that takes off. Interview sums use a multiplier: this game uses 10, and worked examples range from about 2 to 100. Say \"about 2,000 a second on average; I'll call the peak 20,000 and design for that\"."
+    source: https://www.hellointerview.com/learn/system-design/problem-breakdowns/bitly
+
+  - id: r-03
+    type: estimate
+    bloom: apply
+    prompt: A photo-sharing app. Size its busiest second. Use about 100,000 seconds in a day and a peak of about 10 times the average.
+    generator:
+      kind: peak_rps
+      params:
+        users: [1000000, 50000000]
+        actions: [5, 50]
+    explain: A day has 86,400 seconds. Rounding up to 100,000 turns the division into dropping five zeros, and the small error vanishes inside the peak factor. Then multiply by 10. Say the working aloud, because the method earns the marks, not the exact digits.
+    source: https://www.hellointerview.com/learn/system-design/problem-breakdowns/top-k
+
+  - id: r-04
+    type: duel
+    bloom: evaluate
+    prompt: An online shop's catalogue. Shoppers view product pages about 1,000 times for every edit the staff make. The database is starting to struggle. What do you add first?
+    choices:
+      - Split the database across several machines (sharding)
+      - A cache in front of the database for product pages
+      - A queue to buffer the writes
+      - A bigger machine that only takes writes
+    correct: 1
+    reasons:
+      - Nearly all the load is reads, and a cache read takes about 1 ms, a query 20-50 ms
+      - A cache makes writes faster
+      - A shop never needs sharding
+    reason: 0
+    costs:
+      - A product page can be slightly out of date until its cached copy is refreshed
+      - Every read now hits the database twice
+      - Nothing, because caches are free
+    cost: 0
+    explain: "The read-to-write ratio tells you where to spend. At 1,000 reads per write the writes are tiny, so sharding solves a problem you don't have. A cache takes most reads off the database. Say \"Reads dominate, so a cache first. I'll accept a few seconds of staleness and refresh a page's cached copy when it's edited.\""
+    source: https://www.hellointerview.com/learn/system-design/in-a-hurry/core-concepts
+
+  - id: r-05
+    type: estimate
+    bloom: apply
+    prompt: An invoicing service keeps a file copy of every invoice it issues. How much storage does a year of new invoices need? Each step from KB to MB to GB to TB (kilobytes up to terabytes) is about 1,000 times the last.
+    generator:
+      kind: storage_year
+      params:
+        items: [10000, 1000000]
+        kb: [50, 500]
+    explain: "Size a day (items times size), times 365 for a year, then step the units up: a thousand KB is an MB, a thousand MB a GB, a thousand GB a TB. Name the unit at every step so a slip shows. Files like these belong in object storage, with only their details in the database; a single database copes comfortably with a few TB."
+    source: https://www.hellointerview.com/learn/system-design/in-a-hurry/core-concepts
+
+  - id: r-06
+    type: write
+    bloom: apply
+    prompt: "A podcast hosting site: creators upload episodes, listeners stream them. Rewrite this brief with numbers: \"It must be fast, always up, never lose an upload and cope with growth.\""
+    key_points:
+      - "Latency with a percentile, e.g. an episode starts playing within 1 second for 99% of plays"
+      - "Availability as nines, with what that allows, e.g. 99.9% is about 9 hours down a year"
+      - Durability, e.g. once an upload is confirmed it survives losing a data centre
+      - "Scale with a peak: plays a day, and the busiest second at about 10 times the average"
+      - The read-to-write ratio, e.g. plays far outnumber uploads
+    model: "Episodes start within 1 second for 99% of plays. Listening is up 99.9% of the time (about 9 hours down a year); uploads can tolerate a little more. Once an upload is confirmed it survives losing a data centre. 10 million plays a day, peaking at about 10 times the average. Around 10,000 plays per upload, so reads dominate."
+    explain: "Each vague word hides a decision. A number for each one tells the interviewer what you're designing for and gives every deep dive a target. Say \"the system should…\", then the figure, then which part it applies to, because listening may need more nines than uploading."
+    source: https://www.hellointerview.com/learn/system-design/in-a-hurry/delivery
+
+  - id: r-07
+    type: multi
+    bloom: analyse
+    prompt: A page must load in under 250 ms. The app server makes its database reads one after another. Which set-ups fit inside that budget?
+    options:
+      - Four queries to a database in the same data centre
+      - Four queries to a database in another region
+      - Four reads that all hit a cache in the same data centre
+      - One combined query to a database in another region
+      - Four calls to a service in another region, each running one query
+    correct: [0, 2, 3]
+    explain: "Round trips decide it. Inside one data centre a hop costs under 1-2 ms; to another region it costs 50-150 ms, before the query's own 20-50 ms. Four in a row across regions blow the budget; one does not. Fix: keep chatty calls in one region, batch them, or cache. Ask \"how many round trips, and how far?\""
+    source: https://www.hellointerview.com/learn/system-design/deep-dives/numbers-to-know
+
+  - id: r-08
+    type: estimate
+    bloom: analyse
+    prompt: A web analytics product records every click on its customers' websites. Work out the peak writes a second, then decide whether one database copes or the data needs splitting.
+    generator:
+      kind: shard_or_not
+      params:
+        users: [100000, 50000000]
+        writes: [10, 200]
+    explain: "One well-tuned SQL (Structured Query Language) database handles up to about 50,000 simple transactions a second, but writes strain it first. Past about 10,000 writes a second, consider splitting the data across machines (sharding). Below that, say \"one database plus a standby copy; no sharding yet\". Sharding early buys complexity you don't need."
+    source: https://www.hellointerview.com/learn/system-design/in-a-hurry/core-concepts
+
+  - id: r-09
+    type: order
+    bloom: understand
+    prompt: Put these in order, fastest first.
+    items:
+      - Reading a value from the app's own memory
+      - Reading a small block from a local solid-state drive (SSD)
+      - Reading from a cache server in the same data centre
+      - Running a typical database query
+      - A round trip to another region
+    explain: "Memory takes nanoseconds, an SSD microseconds, a cache about 1 ms, a database query 20-50 ms and another region 50-150 ms. That ladder is why a cache pays off and why chatty calls across regions hurt. Say the number whenever you add a box or a hop."
+    source: https://www.hellointerview.com/learn/system-design/in-a-hurry/core-concepts
+
+  - id: r-boss
+    type: lightning
+    bloom: remember
+    prompt: "The yardsticks. You hear the phrase; give the number or the rule. 90 seconds."
+    seconds: 90
+    pairs:
+      - ["Seconds in a day, for interview sums", "About 100,000"]
+      - ["The peak, compared with the average", "About 10 times the average"]
+      - ["One step from KB to MB, or from GB to TB", "Times 1,000"]
+      - ["What one well-tuned SQL database can take", "Up to about 50,000 transactions a second"]
+      - ["When to think about splitting the database", "Past about 10,000 writes a second"]
+      - ["A read from a cache", "About 1 ms"]
+      - ["A typical database query", "20-50 ms"]
+      - ["A call inside one data centre", "Under 1-2 ms"]
+      - ["A round trip to another region", "50-150 ms"]
+      - ["Reads far outnumber writes", "Cache first, then read copies"]
+    explain: These numbers turn hand-waving into decisions in seconds. If one was slow, write it on a card and say it aloud before the next round.
+    source: https://www.hellointerview.com/learn/system-design/in-a-hurry/core-concepts

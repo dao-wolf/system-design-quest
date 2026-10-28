@@ -1,0 +1,226 @@
+chapter: 4
+slug: storage
+title: Storage and key technologies
+emoji: "🗄️"
+pillar: Key technologies
+blurb: Start with a relational database, add a store only when a requirement forces it, and say what each one costs.
+boss: stor-boss
+challenges:
+  - id: stor-01
+    type: write
+    bloom: evaluate
+    prompt: "The interviewer asks why you chose PostgreSQL, a relational (SQL, Structured Query Language) database, over a NoSQL (non-relational) store for a photo-sharing app's users, albums and comments. Write your answer in two or three sentences."
+    key_points:
+      - The data relates to itself, so joins, transactions and indexes fit it
+      - Relational is the sound default; another store comes in when a requirement forces it
+      - Names the requirement that would change the choice, such as a huge write volume
+      - "No sweeping claims like \"SQL doesn't scale\""
+      - PostgreSQL goes a long way with indexes, read replicas and caching
+    model: "Users, albums and comments all relate to each other, so joins, transactions and indexes fit, and PostgreSQL goes a long way with indexes, read replicas and caching. I'd add another store only when a requirement forces it. If comment writes grew past what one database handles, that table is where I'd look at a wide-column store."
+    explain: "A clear default plus the condition that would change it shows judgement; a tour of every database shows none. Broad claims like \"NoSQL scales, SQL doesn't\" invite a hard follow-up. Say: \"Relational until a requirement forces otherwise, and here's the one that would.\""
+    source: https://www.hellointerview.com/learn/system-design/core-concepts/data-modeling
+
+  - id: stor-02
+    type: multi
+    bloom: understand
+    prompt: "An invoices table is slow to answer \"show this customer's invoices\". You add an index on the customer column. Which of these are true?"
+    options:
+      - Lookups by customer no longer read the whole table
+      - Every insert and update now writes to the index as well
+      - The index takes extra disk space
+      - Inserts get faster
+      - Queries that filter only on the amount speed up too
+      - It's worth indexing every column, just in case
+    correct: [0, 1, 2]
+    explain: "An index (usually a B-tree, kept sorted) lets the database jump to matching rows instead of reading every row. The price is paid on every write, which must update each index too, plus disk space. Say: \"I'll index the columns my main queries filter on, and no more, because each index slows writes.\""
+    source: https://www.hellointerview.com/learn/system-design/core-concepts/db-indexing
+
+  - id: stor-03
+    type: duel
+    bloom: evaluate
+    prompt: Users upload photos of up to 20 megabytes (MB) each. How do the files get stored?
+    choices:
+      - The app server takes the file and saves it in a database column
+      - The phone uploads straight to object storage with a presigned URL
+      - The app server takes the file and passes it on to object storage
+    correct: 1
+    reasons:
+      - Big files skip your servers; the database keeps only small metadata rows
+      - Object storage can be queried like a database
+      - Presigned URLs never expire, so retries are simple
+    reason: 0
+    costs:
+      - "Two steps to track: the upload and its metadata row can drift apart"
+      - Every photo becomes public
+      - None at all
+    cost: 0
+    explain: "A presigned URL is a short-lived signed web link that lets the client put one file straight into object storage, such as Amazon S3 (Simple Storage Service), with no credentials of its own. The bytes never load your servers. Keep the metadata in the database, marked pending until the upload completes. Say: \"Presigned upload to S3, metadata in Postgres.\""
+    source: https://docs.aws.amazon.com/AmazonS3/latest/userguide/PresignedUrlUploadObject.html
+
+  - id: stor-04
+    type: estimate
+    bloom: apply
+    prompt: A photo-sharing app. Uploads a day and the average photo size are below. Roughly how much object storage does a year of photos need?
+    generator:
+      kind: storage_year
+      params:
+        items: [500000, 20000000]
+        kb: [200, 4000]
+    explain: "Uploads a day, times the size, times 365, then round. Two million photos at 2 MB is 4 terabytes (TB) a day, about 1.5 petabytes a year. That is object storage's job, never the database's. Say the sum out loud and round hard; the order of magnitude is what counts."
+    source: https://www.hellointerview.com/learn/system-design/in-a-hurry/key-technologies
+
+  - id: stor-05
+    type: duel
+    bloom: apply
+    prompt: "Comments on photos live in DynamoDB, and each photo and comment has an ID (identifier). The main read is \"all comments on one photo, newest first\". Which primary key?"
+    choices:
+      - "Partition key: photo ID. Sort key: time plus comment ID"
+      - "Partition key: the date the comment was posted"
+      - "Partition key: comment ID, then scan for the photo"
+    correct: 0
+    reasons:
+      - One query reads one partition, already in order
+      - Dates spread writes evenly across partitions
+      - Scans are cheap in DynamoDB
+    reason: 0
+    costs:
+      - A viral photo's comments all land on one partition
+      - Comments can't be sorted
+      - Every read becomes a full-table scan
+    cost: 0
+    explain: "DynamoDB hashes the partition key to decide where an item lives; the sort key orders items inside it. Design keys around your main query, because ad-hoc questions need a planned index or a costly scan. A date key sends every new write to today's partition. Say: \"Partition by photo, sort by time, and a secondary index if we need comments by user.\""
+    source: https://www.hellointerview.com/learn/system-design/deep-dives/dynamodb
+
+  - id: stor-06
+    type: duel
+    bloom: apply
+    prompt: "A photo app shows \"top 100 photos today\" by likes, updated live, plus each photo's rank. Counting with SQL on every page view is too slow. What do you reach for?"
+    choices:
+      - "A Redis sorted set for the day: each photo's score is its like count"
+      - Cache the SQL result in app memory for an hour
+      - Elasticsearch, sorted by likes
+    correct: 0
+    reasons:
+      - Members stay sorted by score; updates and rank reads take log time
+      - Redis is a durable system of record
+      - Sorted sets take no memory
+    reason: 0
+    costs:
+      - "It lives in memory: rebuild it from the database after a failure"
+      - Ranks are only right once an hour
+      - Each like needs a full re-sort
+    cost: 0
+    explain: "A sorted set keeps members ordered by score, so updating a score and reading the top 100 or one photo's rank are both fast. Give each day's set an expiry (TTL, time to live) so old days clean themselves up. Redis can lose recent writes in a crash, so likes still go to the database. Say: \"Sorted set for the board, database for the truth.\""
+    source: https://www.hellointerview.com/learn/system-design/deep-dives/redis
+
+  - id: stor-07
+    type: flaw
+    bloom: analyse
+    prompt: A document search product. Find the weak box, then pick the fix.
+    diagram:
+      width: 640
+      height: 300
+      nodes:
+        - {id: client, label: Web app, x: 20, y: 126}
+        - {id: api, label: App servers, x: 180, y: 126}
+        - {id: cache, label: Redis cache, x: 180, y: 20}
+        - {id: pg, label: "PostgreSQL: users, teams", x: 380, y: 20}
+        - {id: es, label: "Elasticsearch: all documents", x: 380, y: 126}
+        - {id: s3, label: "Object storage: attachments", x: 380, y: 232}
+      edges:
+        - [client, api]
+        - [api, cache]
+        - [api, pg]
+        - [api, es, writes and searches]
+        - [api, s3]
+    flaw: es
+    fixes:
+      - Keep documents in PostgreSQL and feed Elasticsearch from it with change data capture
+      - Add more Elasticsearch nodes
+      - Put a Redis cache in front of Elasticsearch
+      - Drop Elasticsearch and search with SQL LIKE queries on PostgreSQL
+    fix: 0
+    explain: "Elasticsearch is a search engine built on an inverted index (each word points to the documents that contain it); it shouldn't hold the only copy. Store documents in PostgreSQL and stream changes into the index with change data capture (CDC). Search then lags a little behind, so say: \"Search is a read copy, a moment behind the database.\""
+    source: https://www.hellointerview.com/learn/system-design/deep-dives/elasticsearch
+
+  - id: stor-08
+    type: duel
+    bloom: evaluate
+    prompt: "Every click on a product catalogue must feed three teams' jobs: search ranking, reporting and recommendations. A buggy job must be able to re-read last week's clicks. What carries the clicks?"
+    choices:
+      - A Kafka topic, with one consumer group per team
+      - A Redis list that each job pops clicks from
+      - A database table that each job polls every second
+    correct: 0
+    reasons:
+      - Kafka keeps records for a set time; each group tracks its own offset and can rewind
+      - Kafka keeps one global order across the whole topic
+      - Kafka deletes a record once any job reads it
+    reason: 0
+    costs:
+      - Order is kept only within a partition, so pick the key with care
+      - Only one team can read each click
+      - Clicks vanish once read
+    cost: 0
+    explain: "Kafka is a durable log split into partitions. Each consumer group reads every record at its own position (offset), so teams don't slow each other and a fixed job can replay. Order is kept within a partition only: key by product if per-product order matters. Say: \"Kafka, a group per team, a week's retention.\""
+    source: https://www.hellointerview.com/learn/system-design/deep-dives/kafka
+
+  - id: stor-09
+    type: lightning
+    bloom: remember
+    prompt: "When you hear this, reach for what? 90 seconds."
+    pairs:
+      - ["Photos, videos and other big files", "Object storage (S3), metadata in the database"]
+      - ["Search for words inside text", "Elasticsearch (an inverted index)"]
+      - ["A live top 100 by score", "Redis sorted set"]
+      - ["Joins, transactions and a clear schema", "PostgreSQL"]
+      - ["A huge, steady, append-heavy write volume", "Cassandra (wide-column)"]
+      - ["Several teams replaying one stream of records", "Kafka"]
+      - ["Simple lookups by key at enormous scale", "DynamoDB"]
+      - ["The same data read again and again, fast", "Redis cache with a TTL"]
+    explain: "Each store earns its place with one requirement. Name the requirement as you add the box, and its cost straight after: search lags, memory can be lost in a crash, scans are slow. Say: \"I'm adding X because of Y; it costs Z.\""
+    source: https://www.hellointerview.com/learn/system-design/in-a-hurry/key-technologies
+
+  - id: stor-boss
+    type: fill
+    bloom: evaluate
+    prompt: "A photo-sharing app. Drag the right store onto each need on the arrows: photo files, users and albums, caption search, today's top photos, view records as they happen, and a year of views written all day long."
+    diagram:
+      width: 640
+      height: 300
+      nodes:
+        - {id: client, label: Phone app, x: 20, y: 126}
+        - {id: api, label: App servers, x: 180, y: 126}
+        - {id: files, label: "?", x: 340, y: 20}
+        - {id: main, label: "?", x: 340, y: 126}
+        - {id: stream, label: "?", x: 340, y: 232}
+        - {id: top, label: "?", x: 500, y: 20}
+        - {id: search, label: "?", x: 500, y: 126}
+        - {id: wide, label: "?", x: 500, y: 232}
+      edges:
+        - [client, api]
+        - [client, files, photo files]
+        - [api, main, "users, albums, likes"]
+        - [api, top, "today's top photos"]
+        - [main, search, caption search copy]
+        - [api, stream, view records]
+        - [stream, wide, "a year of views, write-heavy"]
+    slots:
+      files: Object storage (S3)
+      main: PostgreSQL
+      top: Redis sorted set
+      search: Elasticsearch
+      stream: Kafka
+      wide: Cassandra
+    palette:
+      - Object storage (S3)
+      - PostgreSQL
+      - Redis sorted set
+      - Elasticsearch
+      - Kafka
+      - Cassandra
+      - Photos in a PostgreSQL column
+      - Redis as the main database
+      - Graph database
+    explain: "Files go to object storage; related rows to PostgreSQL; word search to Elasticsearch fed from Postgres; a live top list to a Redis sorted set; a replayable stream to Kafka; heavy append-only writes to Cassandra. Photos in a database column bloat it; Redis as the truth can lose data. Say each box's reason as you place it."
+    source: https://www.hellointerview.com/learn/system-design/in-a-hurry/key-technologies

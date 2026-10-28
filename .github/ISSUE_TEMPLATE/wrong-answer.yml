@@ -1,0 +1,24 @@
+name: Report a wrong answer
+description: A challenge's marked answer looks wrong, or its explanation is off.
+labels: ["challenge-content"]
+body:
+  - type: input
+    id: challenge
+    attributes:
+      label: Challenge
+      description: Paste the prompt, or the chapter or quest and roughly where it sits.
+    validations:
+      required: true
+  - type: input
+    id: marked
+    attributes:
+      label: Answer the game marked as right
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why you think it's wrong
+      description: Your reasoning, in a line or two. A link to a source helps.
+    validations:
+      required: true

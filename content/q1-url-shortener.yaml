@@ -1,0 +1,150 @@
+chapter: 9
+slug: url-shortener
+kind: quest
+title: URL shortener (like Bitly)
+emoji: "🔗"
+pillar: Quests
+builds_on: [1, 2, 4, 5]
+blurb: Turn long links into short ones that redirect fast. Requirements, numbers, API, the design, then the deep dives.
+boss: fb-boss
+challenges:
+  - id: fb-01
+    type: sprint
+    bloom: create
+    minutes: 10
+    prompt: "Requirements for a URL shortener (people turn long links into short ones and share them). Out loud, against the clock: read it back, who uses it and what they do, your three hard parts, how busy (with the peak), what can't break, what's out."
+    checks:
+      - Read the problem back in one line
+      - "Named both users: people who create links and people who click them"
+      - "Picked my own three hard parts, such as unique codes, fast redirects at the peak, and expiry or click counts"
+      - Asked for the scale, the peak and the read-to-write ratio
+      - Said what can't break, such as a code never pointing to the wrong place
+      - Said "I'll assume…" for scope, instead of asking "do you want…?"
+      - Said what's out of scope
+      - Finished inside the time
+    explain: "This problem rewards the same first quarter as any other: a clear read-back, both kinds of user, numbers with a peak, and your own picks. Redirects vastly outnumber new links, which shapes the whole design. If a check missed, rehearse that line before the next round."
+    source: https://www.hellointerview.com/learn/system-design/problem-breakdowns/bitly
+
+  - id: fb-02
+    type: estimate
+    bloom: apply
+    prompt: Redirects for a popular link shortener. Estimate the busiest second.
+    generator:
+      kind: peak_rps
+      params:
+        users: [1000000, 200000000]
+        actions: [1, 10]
+    explain: "Clicks a day, divided by about 100,000 seconds, times 10 for the peak. Redirects are reads, so this number sizes the cache and the app servers, while new links stay a trickle. Say the working aloud and round hard."
+    source: https://www.hellointerview.com/learn/system-design/in-a-hurry/core-concepts
+
+  - id: fb-03
+    type: write
+    bloom: apply
+    prompt: "Name the core entities, then sketch the API: create a short link, and follow one."
+    key_points:
+      - "Entities: a short link (code, long URL, owner, created, optional expiry) and a user"
+      - "POST /urls with the long URL, an optional custom alias and expiry; returns 201 and the code"
+      - GET /{code} answers with a redirect to the long URL
+      - "404 for an unknown code, 410 Gone for an expired one"
+      - The owner comes from the token, never from the request body
+    model: "Entities: ShortLink (code, long URL, owner, created at, expires at) and User. POST /urls takes the long URL, an optional alias and expiry, and returns 201 with the short code; the owner comes from the token. GET /{code} returns a redirect to the long URL, 404 if the code is unknown and 410 if it has expired."
+    explain: "Two endpoints carry the whole product, so name them early and keep them plain. The redirect is the hot path; creating links is rare. Say: \"Entities first, then the API is just verbs on them.\""
+    source: https://www.hellointerview.com/learn/system-design/in-a-hurry/delivery
+
+  - id: fb-04
+    type: fill
+    bloom: apply
+    prompt: "Land the design end to end. Drag each part into its box: the hot lookup, the source of truth, where new codes come from, and how clicks get counted without slowing the redirect."
+    diagram:
+      width: 640
+      height: 300
+      nodes:
+        - {id: browser, label: Browser, x: 10, y: 126}
+        - {id: lb, label: Load balancer, x: 140, y: 126}
+        - {id: app, label: App servers, x: 270, y: 126}
+        - {id: s-counter, label: "?", x: 270, y: 20}
+        - {id: s-cache, label: "?", x: 396, y: 20}
+        - {id: s-db, label: "?", x: 396, y: 126}
+        - {id: s-queue, label: "?", x: 396, y: 232}
+        - {id: workers, label: Click-count workers, x: 522, y: 232, w: 114}
+      edges:
+        - [browser, lb]
+        - [lb, app]
+        - [app, s-counter, block of IDs]
+        - [app, s-cache, look up code]
+        - [app, s-db, on a miss]
+        - [app, s-queue, click event]
+        - [s-queue, workers]
+    slots:
+      s-cache: Redis cache
+      s-db: "Database: code → long URL"
+      s-counter: ID counter
+      s-queue: Queue
+    palette:
+      - Redis cache
+      - "Database: code → long URL"
+      - ID counter
+      - Queue
+      - WebSocket server
+      - Graph database
+      - Search index
+    explain: "The cache answers almost every redirect; the database is the truth behind it; a counter hands out unique numbers for new codes; clicks go onto a queue so counting never slows a redirect. Say each box's reason as you place it, then: \"That's the whole path. The deep dives are codes and redirect speed.\""
+    source: https://www.hellointerview.com/learn/system-design/problem-breakdowns/bitly
+
+  - id: fb-05
+    type: duel
+    bloom: evaluate
+    prompt: Marketing wants every click on a short link counted. Which redirect do you send?
+    choices:
+      - 302 Found, a temporary redirect
+      - 301 Moved Permanently
+    correct: 0
+    reasons:
+      - Browsers don't remember a 302, so every click comes back to you and is counted
+      - A 302 is faster for the person clicking
+      - A 301 can't carry a long URL
+    reason: 0
+    costs:
+      - Every click is a request you serve, so the cache and servers carry more load
+      - Links stop working after a day
+      - None
+    cost: 0
+    explain: "A 301 tells browsers to remember the target, so repeat clicks skip your servers: less load, but you lose the count. A 302 brings every click back to you. Say: \"302, because counting clicks is a requirement; the cache absorbs the load.\""
+    source: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/302
+
+  - id: fb-06
+    type: multi
+    bloom: analyse
+    prompt: Redirects must answer in under 50 ms at the peak. Which of these help?
+    options:
+      - Cache code → URL in Redis, evicting the least used
+      - Keep app servers stateless and add more at the peak
+      - Read replicas for cache misses
+      - Put link creation on a queue
+      - Shard the links table by creation date
+      - Index the long URL column
+    correct: [0, 1, 2]
+    explain: "A small share of links gets most clicks, so a cache holding the popular codes answers nearly everything in about a millisecond. Stateless servers scale out, and replicas take the misses. Queuing creation doesn't touch the redirect path, sharding by date piles new writes on one shard, and the long-URL index only helps spot duplicates. Say: \"Cache the hot codes; replicas behind it.\""
+    source: https://www.hellointerview.com/learn/system-design/core-concepts/caching
+
+  - id: fb-boss
+    type: duel
+    bloom: evaluate
+    prompt: "Deep dive: how do you make the short codes? Seven characters, billions of links, and several app servers creating them at once."
+    choices:
+      - A counter, written in base62 and handed out in blocks
+      - Hash the long URL and keep the first seven characters
+      - Seven random characters, checked against the database
+    correct: 0
+    reasons:
+      - Each number is used once, so codes never clash and nothing needs checking first
+      - Hashing guarantees no two links ever share a code
+      - Random codes can never clash
+    reason: 0
+    costs:
+      - Sequential codes are guessable unless scrambled, and the counter must stay up
+      - Every link needs a lookup in a global index
+      - Codes get longer every year
+    cost: 0
+    explain: "62 characters in seven places give about 3.5 trillion codes. A counter guarantees uniqueness, and giving each app server a block of 1,000 numbers at a time saves a round trip per link and survives a short counter outage. Truncated hashes collide; random codes need a check that slows as the space fills. Say: \"Counter plus base62, handed out in blocks.\""
+    source: https://www.hellointerview.com/learn/system-design/problem-breakdowns/bitly

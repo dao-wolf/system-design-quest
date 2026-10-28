@@ -1,0 +1,158 @@
+chapter: 1
+slug: method
+title: The method
+emoji: "🧭"
+pillar: The interview
+blurb: Run the round in the right order, decide instead of asking, and land a whole design before going deep.
+boss: m-boss
+challenges:
+  - id: m-01
+    type: order
+    bloom: remember
+    prompt: Put the steps of a system design round in order.
+    items:
+      - Functional requirements
+      - Non-functional requirements
+      - Core entities
+      - API
+      - High-level design
+      - Deep dives
+    explain: Requirements first, because every later box has to serve one. The high-level design meets the functional requirements; the deep dives meet the non-functional ones. Say it as your plan in the first minute.
+    source: https://www.hellointerview.com/learn/system-design/in-a-hurry/delivery
+
+  - id: m-02
+    type: multi
+    bloom: understand
+    prompt: Which of these are non-functional requirements?
+    options:
+      - Users can upload a photo
+      - Reads return in under 200 ms for 99% of requests
+      - The system stays up if one data centre goes down
+      - Users can follow other users
+      - A payment is never applied twice
+      - Admins can delete posts
+    correct: [1, 2, 4]
+    explain: Functional requirements say what users can do ("users should be able to…"). Non-functional ones say how well the system must do it ("the system should…"), and they carry numbers. They decide your deep dives.
+    source: https://www.hellointerview.com/learn/system-design/in-a-hurry/delivery
+
+  - id: m-03
+    type: duel
+    bloom: evaluate
+    prompt: "The interviewer says \"up to you\" about whether refunds are in scope. What do you say?"
+    choices:
+      - "\"Do you want refunds in scope?\""
+      - "\"I'll assume refunds are out. Tell me if that's wrong.\""
+      - "\"Let's include everything, to be safe.\""
+    correct: 1
+    reasons:
+      - It shows judgement and keeps the time for the hard parts
+      - Interviewers mark you on how many questions you ask
+      - It means you can never be wrong
+    reason: 0
+    costs:
+      - If they did want refunds, you adjust in one sentence
+      - Nothing; assumptions are free
+      - You lose the marks for problem navigation
+    cost: 0
+    explain: Asking hands the decision back to them; deciding and checking shows you can lead. The cost is tiny, because "tell me if that's wrong" invites a correction. Say it as a decision, then check.
+    source: https://www.hellointerview.com/blog/staff-level-system-design
+
+  - id: m-04
+    type: recall
+    bloom: remember
+    prompt: The interviewer has just given you the problem. What's your first move?
+    answer: "Write it down in their words and read it back: \"So we're building X for Y. Have I got that right?\""
+    explain: Reading it back catches a misheard problem before you spend twenty minutes on it, and it shows you listen. It takes ten seconds.
+    source: https://www.hellointerview.com/learn/system-design/in-a-hurry/delivery
+
+  - id: m-05
+    type: multi
+    bloom: analyse
+    prompt: Fifty minutes isn't enough to go deep on everything. Which of these usually earn deep-dive time?
+    options:
+      - Money moving
+      - Work that runs on a schedule
+      - Calls to an outside partner
+      - Very high read or write volume
+      - A static help page
+      - A profile settings form
+      - Changing a display name
+    correct: [0, 1, 2, 3]
+    explain: "Go deep where things break or cost money: money, timing, partners and scale. The rest take the simple path, one sentence each. Say \"I'll go deep on X, Y and Z; the rest take the simple path.\""
+    source: https://www.hellointerview.com/blog/staff-level-system-design
+
+  - id: m-06
+    type: write
+    bloom: apply
+    prompt: "Write the non-functional requirements for a URL shortener, with numbers. Don't forget the busiest time."
+    key_points:
+      - A scale figure (redirects or new links a day)
+      - A peak figure, not just the average
+      - A latency target for a redirect
+      - "Availability: redirects must stay up"
+      - Reads far outnumber writes
+    model: "About 100 million redirects a day, ten times the average rate at the peak; a redirect in under 100 ms for 99% of requests; redirects available 99.99% of the time; reads outnumber new links about 100 to 1; a short link never points at the wrong place."
+    explain: Numbers turn "fast and reliable" into decisions. The peak, not the average, sizes the system, and the read-to-write ratio tells you a cache will pay off. Say "the system should…" and put a number on each.
+    source: https://www.hellointerview.com/learn/system-design/problem-breakdowns/bitly
+
+  - id: m-07
+    type: recall
+    bloom: understand
+    prompt: Why land a simple design end to end before going deep on any part?
+    answer: A working whole proves every requirement has a path and lets the interviewer steer the deep dive. Not reaching a working system is a common way to fail.
+    explain: Depth on one box with gaps elsewhere reads as poor navigation. Say "Let me land a simple version end to end first", then deepen where the requirements push.
+    source: https://www.hellointerview.com/learn/system-design/in-a-hurry/delivery
+
+  - id: m-08
+    type: duel
+    bloom: evaluate
+    prompt: Ten minutes into the high-level design, you can see reads will be heavy. Nobody has asked about performance yet. Best move?
+    choices:
+      - Design the cache in full now
+      - Say where a cache would go, note it, and keep landing the design
+      - Leave caching out; it's an optimisation
+    correct: 1
+    reasons:
+      - It shows you see the bottleneck without derailing the whole design
+      - Caches are always marked down in interviews
+      - Interviewers never ask about performance
+    reason: 0
+    costs:
+      - You owe it a proper look in the deep dive
+      - The design gets slower
+      - None
+    cost: 0
+    explain: Naming it shows judgement; designing it now spends deep-dive time before the whole exists. Say "A cache would go here; I'll come back to it", and do.
+    source: https://www.hellointerview.com/learn/system-design/in-a-hurry/delivery
+
+  - id: m-09
+    type: lightning
+    bloom: remember
+    prompt: "When this happens, say what? 90 seconds."
+    pairs:
+      - ["They say \"you decide\"", "\"I'll assume X. Tell me if that's wrong.\""]
+      - ["You're stuck or going round in circles", "\"Let me park that and land the rest.\""]
+      - ["They push back on a choice", "\"Good challenge.\" Weigh it, decide, move on"]
+      - ["It's time to draw", "\"Let me land a simple version end to end first.\""]
+      - ["A tool you haven't run in production", "\"I haven't run X in production. What I'd need from it is Y.\""]
+      - ["The wrap-up starts", "\"Three things I'd do next.\""]
+      - ["You need a moment to think", "\"Let me think for ten seconds.\""]
+      - ["You're about to add a box", "Say what it solves and what it costs"]
+    explain: Pre-loaded lines stop silence and stop you handing decisions back. Each one buys time and keeps you leading.
+    source: https://www.hellointerview.com/blog/staff-level-system-design
+
+  - id: m-boss
+    type: sprint
+    bloom: create
+    prompt: "Requirements for a Pastebin (people paste text and share a link). Out loud, against the clock: read it back, who uses it and what they do, your three hard parts, how busy (with the peak), what can't break, what's out."
+    minutes: 10
+    checks:
+      - Read the problem back in one line
+      - Named each type of user and what they do
+      - Picked my own three hard parts
+      - Asked for the scale and the peak
+      - Said "I'll assume…" instead of asking "do you want…?"
+      - Said what's out of scope
+      - Finished inside the time
+    explain: This is the shape of every round's first quarter. If one check missed, that's the line to rehearse before the next round.
+    source: https://github.com/donnemartin/system-design-primer

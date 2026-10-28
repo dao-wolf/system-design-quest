@@ -1,0 +1,281 @@
+chapter: 8
+slug: patterns
+title: Patterns
+emoji: "🧱"
+pillar: Patterns
+blurb: The moves that recur in most designs. Spot which one a problem needs, then say what it costs.
+boss: pat-boss
+challenges:
+  - id: pat-01
+    type: duel
+    bloom: evaluate
+    prompt: "A team dashboard's main query joins six tables and takes 2 seconds. It's read 200 times a minute, and the data under it changes all day. What do you do?"
+    choices:
+      - Keep a precomputed read model, updated as the data changes
+      - Cache the query result for an hour
+      - Add a read replica and run the same query there
+    correct: 0
+    reasons:
+      - Readers get a ready-made row in milliseconds, and it stays close to current
+      - A cache is never stale
+      - A replica runs the same join faster
+    reason: 0
+    costs:
+      - "Two shapes of the data to keep in step, and the read model lags slightly"
+      - The dashboard can't be filtered any more
+      - Writes stop working
+    cost: 0
+    explain: "When a read is expensive and constant, do the work once at write time. A separate read model (the idea behind CQRS, command query responsibility segregation) is shaped for the screen, while a cache would be an hour stale and a replica still runs the slow join. Say: \"Precompute the dashboard's view as data changes; accept a second or two of lag.\""
+    source: https://martinfowler.com/bliki/CQRS.html
+
+  - id: pat-02
+    type: multi
+    bloom: analyse
+    prompt: A metrics service takes 200,000 small writes a second, and one database can't keep up. Which of these help it scale writes?
+    options:
+      - Buffer writes in memory and flush them in batches every second
+      - Split the data across machines by a well-spread key
+      - Use a store built for heavy writes, such as Cassandra
+      - Add up counts before storing them, one row a minute per metric
+      - Add read replicas
+      - Put a cache in front of the database
+    correct: [0, 1, 2, 3]
+    explain: "Writes scale by doing fewer, cheaper or spread-out writes: batch them, pre-aggregate them, shard them, or use a store built for appends. Replicas copy every write, so they add work, and a cache helps reads, not writes. Say: \"Batch and pre-aggregate first, then shard by metric if it's still too much.\""
+    source: https://www.hellointerview.com/learn/system-design/in-a-hurry/patterns
+
+  - id: pat-03
+    type: order
+    bloom: apply
+    prompt: "A user uploads a 2 GB video from a phone on a patchy connection. Put the steps in order."
+    items:
+      - The app asks the server to start an upload; the server saves a pending record
+      - The server returns presigned URLs, one for each part
+      - The app sends the parts straight to object storage, retrying any part that fails
+      - The app tells the server it has finished
+      - The server checks the parts and marks the video uploaded
+      - Workers process the video, such as transcoding it
+    explain: "Big files go straight from the client to object storage in parts, so your servers never carry the bytes and a dropped connection costs one part, not the whole file. The database keeps only the record and its state. Say: \"Multipart, presigned uploads straight to storage, with a pending record until it completes.\""
+    source: https://docs.aws.amazon.com/AmazonS3/latest/userguide/mpuoverview.html
+
+  - id: pat-04
+    type: flaw
+    bloom: analyse
+    prompt: A video course site. Viewers around the world stream lessons. Find the box that will hurt first, then pick the fix.
+    diagram:
+      width: 640
+      height: 300
+      nodes:
+        - {id: viewers, label: Viewers worldwide, x: 20, y: 126}
+        - {id: lb, label: Load balancer, x: 180, y: 126}
+        - {id: app, label: "App servers: stream video bytes", x: 340, y: 126, w: 140}
+        - {id: s3, label: "Object storage: videos", x: 500, y: 40, w: 130}
+        - {id: db, label: "Database: courses, progress", x: 500, y: 212, w: 130}
+      edges:
+        - [viewers, lb]
+        - [lb, app]
+        - [app, s3, reads whole files]
+        - [app, db]
+    flaw: app
+    fixes:
+      - Serve videos from a CDN in front of object storage, using signed links
+      - Add more app servers
+      - Keep popular videos in a Redis cache
+      - Store the videos in the database
+    fix: 0
+    explain: "Pushing every byte of video through your own servers wastes them and puts far-away viewers on slow paths. A CDN (content delivery network) serves copies from near each viewer, and signed, short-lived links keep paid lessons private. Say: \"Videos from a CDN with signed links; the app only hands out the link.\""
+    source: https://www.hellointerview.com/learn/system-design/in-a-hurry/patterns
+
+  - id: pat-05
+    type: write
+    bloom: apply
+    prompt: "A year-end report takes about four minutes to build. Explain how the request works and how the user finds out it's ready."
+    key_points:
+      - The request returns at once (202 Accepted) with a job ID
+      - The work goes on a queue for workers, not the web server
+      - A job record tracks its state, such as pending, running, done or failed
+      - The client checks a status endpoint, or gets a live update or an email when it's done
+      - The finished file is fetched by a link, such as a presigned URL
+    model: "POST /reports returns 202 and a job ID straight away. A worker picks the job off a queue and updates the job's state as it goes. The page checks GET /jobs/{id} every few seconds, or listens for a server-sent event; when it's done, the response includes a short-lived link to the file. A failed job shows as failed, with a retry button."
+    explain: "Holding a request open for minutes ties up a server and breaks on any timeout or deploy. Accepting the job and reporting its state lets the work survive restarts and lets workers scale on their own. Say: \"Accept, return a job ID, process in the background, report the state.\""
+    source: https://www.hellointerview.com/learn/system-design/in-a-hurry/patterns
+
+  - id: pat-06
+    type: duel
+    bloom: evaluate
+    prompt: "Onboarding a customer: create the account, take the first payment, set up their workspace, then send a welcome email. Steps can fail or take minutes, and the process must survive a restart. How do you run it?"
+    choices:
+      - A workflow engine, such as Temporal or AWS Step Functions, running the steps in order
+      - All four steps inside one HTTP request
+      - Each service reacts to the previous one's event, with no central view
+    correct: 0
+    reasons:
+      - It records each finished step, retries failures, and resumes after a crash
+      - It makes every step run faster
+      - It removes the need for idempotent steps
+    reason: 0
+    costs:
+      - "One more system to run, and steps must be safe to replay"
+      - The customer waits for every step
+      - Nobody can see where a stuck customer is
+    cost: 0
+    explain: "With more than two or three steps, a central orchestrator gives you one place to see progress, retry and undo, and it survives restarts. Chaining events between services works for short flows but hides where a stuck case is. One request breaks on the first slow step. Say: \"A workflow engine for the multi-step part; each step idempotent.\""
+    source: https://www.hellointerview.com/learn/system-design/deep-dives/temporal
+
+  - id: pat-07
+    type: sticker
+    bloom: analyse
+    prompt: "Live updates for a shared task board. Put each trait on the box it describes."
+    diagram:
+      width: 640
+      height: 300
+      nodes:
+        - {id: browsers, label: Browsers, x: 20, y: 126}
+        - {id: conn, label: Connection servers, x: 180, y: 126}
+        - {id: pubsub, label: Pub/sub channel, x: 340, y: 20}
+        - {id: app, label: App servers, x: 340, y: 210}
+        - {id: db, label: Database, x: 500, y: 210}
+      edges:
+        - [browsers, conn, SSE or WebSocket]
+        - [pubsub, conn, update]
+        - [app, pubsub, publish]
+        - [app, db, write]
+    stickers:
+      - Holds open connections
+      - Needs care on deploys
+      - Sends one update to every subscriber
+      - The source of truth
+      - Any instance takes any request
+    answers:
+      conn: [Holds open connections, Needs care on deploys]
+      pubsub: [Sends one update to every subscriber]
+      db: [The source of truth]
+      app: [Any instance takes any request]
+    explain: "A write lands on any app server, but the reader's connection lives on one of many connection servers. The app server saves to the database and publishes the change; every connection server that subscribed passes it to its own browsers. Connection servers hold state, so deploys must drain connections gently. Say: \"Write, publish, fan out to the connection servers.\""
+    source: https://redis.io/docs/latest/develop/interact/pubsub/
+
+  - id: pat-08
+    type: recall
+    bloom: understand
+    prompt: Why does a live-updates design usually put a pub/sub layer between the app servers and the connection servers?
+    answer: The server that handles a write doesn't know which connection server each reader is on. It publishes once; every connection server subscribed to that channel forwards the update to its own readers.
+    explain: "Without it, every app server would have to know every connection, which breaks as soon as there's more than one of each. Say: \"Pub/sub decouples who writes from who's connected.\""
+    source: https://redis.io/docs/latest/develop/interact/pubsub/
+
+  - id: pat-09
+    type: duel
+    bloom: evaluate
+    prompt: "Two fans tap \"Book\" on the last seat in the same second. Seats live in PostgreSQL. How do you make sure exactly one of them gets it?"
+    choices:
+      - "One conditional update: claim the seat only if it's still free"
+      - Read the seat, check it's free, then write in a second query
+      - Put a cache in front of the seats table
+    correct: 0
+    reasons:
+      - Check and claim are one atomic step, so the later claim changes no rows
+      - It's faster than reading first
+      - The cache makes requests take turns
+    reason: 0
+    costs:
+      - "The loser needs a clear \"just taken\" message and a way to pick again"
+      - The seat can still be sold twice
+      - Every booking waits on one global lock
+    cost: 0
+    explain: "Reading, then writing, leaves a gap where both fans see \"free\". Let the database decide in one statement: set the holder WHERE the seat is still free, and treat zero rows changed as \"someone beat you\". A version number checked on write (optimistic locking) is the same idea. Say: \"Claim it with a conditional update; zero rows means it's gone.\""
+    source: https://www.postgresql.org/docs/current/transaction-iso.html
+
+  - id: pat-10
+    type: duel
+    bloom: evaluate
+    prompt: "Checkout takes a few minutes: the fan picks a seat, then types card details. How do you stop anyone else taking the seat meanwhile, without locking it forever?"
+    choices:
+      - "Hold the seat with an expiry, say 10 minutes, and free it if payment doesn't finish"
+      - Keep a database row lock open while the fan types
+      - "Reserve nothing: check again at payment and apologise if it's gone"
+    correct: 0
+    reasons:
+      - Nobody else can take it while the clock runs, and an abandoned hold frees itself
+      - A row lock costs nothing over a few minutes
+      - Fans rarely abandon checkout
+    reason: 0
+    costs:
+      - "Expired holds must count as free again, and held seats look taken"
+      - Database connections tied up for minutes at a time
+      - Fans lose their seat at the very last step
+    cost: 0
+    explain: "Database locks suit milliseconds, not minutes of someone typing. A hold is a conditional write that sets a held-until time; once it passes, the seat counts as free again. For a huge rush on a few seats, add a virtual waiting room that lets people in at a pace you can serve. Say: \"A ten-minute hold with an expiry, claimed atomically.\""
+    source: https://www.hellointerview.com/learn/system-design/problem-breakdowns/ticketmaster
+
+  - id: pat-11
+    type: recall
+    bloom: understand
+    prompt: "Pessimistic or optimistic locking: when does each fit?"
+    answer: "Pessimistic (lock the row, then change it) when conflicts are frequent and the lock is brief. Optimistic (check a version number as you write, retry if it moved) when conflicts are rare."
+    explain: "Locking first makes everyone else wait, which is fine for a busy row held for milliseconds. A version check on write costs nothing until two writers collide, so it suits rare clashes. Neither suits a hold that lasts minutes: that needs a timed reservation. Say: \"Clashes are rare, so optimistic: a version check on write.\""
+    source: https://en.wikipedia.org/wiki/Optimistic_concurrency_control
+
+  - id: pat-12
+    type: fill
+    bloom: apply
+    prompt: "Find nearby drivers. Each driver's phone sends its location every 5 seconds; riders ask for the closest drivers. Fill the two empty boxes."
+    diagram:
+      width: 640
+      height: 300
+      nodes:
+        - {id: drivers, label: Driver phones, x: 20, y: 40}
+        - {id: ingest, label: "?", x: 240, y: 40}
+        - {id: index, label: "?", x: 460, y: 126}
+        - {id: riders, label: Rider app, x: 20, y: 212}
+        - {id: match, label: Matching service, x: 240, y: 212}
+        - {id: db, label: "Database: trips", x: 480, y: 240}
+      edges:
+        - [drivers, ingest, every 5 s]
+        - [ingest, index, latest point]
+        - [riders, match]
+        - [match, index, "within 2 km?"]
+        - [match, db]
+    slots:
+      ingest: Location service
+      index: In-memory geo index
+    palette:
+      - Location service
+      - In-memory geo index
+      - Nightly batch job
+      - Full scan of a lat/long table
+      - CDN
+    explain: "Locations change every few seconds, so keep only each driver's latest point, in memory, in a structure that answers \"who is near here?\" without checking everyone: a geohash- or grid-based index such as Redis GEO. The database keeps trips, not every ping. Say: \"Pings update an in-memory geo index; matching asks it by radius.\""
+    source: https://redis.io/docs/latest/develop/data-types/geospatial/
+
+  - id: pat-13
+    type: multi
+    bloom: analyse
+    prompt: "A food app shows restaurants within 3 km: 2 million places that rarely move, searched all day. Which of these make the search fast?"
+    options:
+      - Index locations by geohash or quadtree cells
+      - Look up the rider's cell and its neighbours, then filter by exact distance
+      - Cache results per cell for busy areas
+      - Use a spatial index, such as PostGIS or Redis GEO
+      - Sort every restaurant by distance on each request
+      - Add read replicas and scan the whole table on each one
+    correct: [0, 1, 2, 3]
+    explain: "A geohash turns a point into a string where a shared prefix means a nearby cell; a quadtree splits busy areas into smaller cells. Search the rider's cell and its neighbours, since a place just over the edge is still near, then filter by real distance. Places rarely move, so busy cells cache well. Say: \"Spatial index, neighbouring cells, then exact distance.\""
+    source: https://en.wikipedia.org/wiki/Geohash
+
+  - id: pat-boss
+    type: lightning
+    bloom: understand
+    seconds: 120
+    prompt: "You hear the problem; name the pattern. Two minutes."
+    pairs:
+      - ["Reads dwarf writes and the data changes slowly", "Scale reads: CDN, cache, replicas"]
+      - ["A slow multi-table query read all day", "A precomputed read model (CQRS)"]
+      - ["Hundreds of thousands of small writes a second", "Scale writes: batch, aggregate, shard"]
+      - ["Users upload multi-gigabyte files", "Multipart, presigned uploads to storage"]
+      - ["Serving big files to people everywhere", "A CDN in front of object storage"]
+      - ["A job takes minutes to finish", "Job ID, queue, status endpoint"]
+      - ["Steps across services that must survive a crash", "A workflow engine"]
+      - ["Browsers must see changes as they happen", "SSE or WebSockets, plus pub/sub"]
+      - ["Two people try to book the last seat at once", "An atomic claim: conditional write or version check"]
+      - ["The seat must stay yours while you pay", "A reservation hold with an expiry"]
+      - ["Find the drivers within 2 km of a rider", "A geo index: geohash, quadtree, Redis GEO"]
+    explain: "Most designs are a few of these patterns joined up. Naming the pattern first gives your answer a shape; then say its cost. If one was slow, say that pairing aloud before the next round."
+    source: https://www.hellointerview.com/learn/system-design/in-a-hurry/patterns

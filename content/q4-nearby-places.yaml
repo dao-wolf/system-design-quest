@@ -1,0 +1,151 @@
+chapter: 12
+slug: nearby-places
+kind: quest
+title: Nearby places (like Yelp)
+emoji: "📍"
+pillar: Quests
+builds_on: [1, 4, 5, 8]
+blurb: "Find good places near you by distance, type and words, and post reviews. Requirements, numbers, endpoints, the design, then the deep dives."
+boss: np-boss
+challenges:
+  - id: np-01
+    type: sprint
+    bloom: create
+    minutes: 10
+    prompt: "Requirements for a nearby-places app (people find businesses near them by distance, type and words, read ratings and post reviews). Out loud, against the clock: read it back, who uses it and what they do, your three hard parts, how busy (with the peak), what can't break, what's out."
+    checks:
+      - Read the problem back in one line
+      - "Named who uses it: people searching nearby, people posting reviews, and owners keeping a place's details current"
+      - "Picked my own three hard parts, such as fast search by distance and words, ratings that stay current, and one review per person"
+      - Asked for the scale and the peak, and said searches will far outnumber reviews
+      - "Said what can't break: search stays fast and up, and a posted review is never lost; results may lag a little"
+      - 'Said "I''ll assume…" for scope, instead of asking "do you want…?"'
+      - "Said what's out of scope, such as bookings, photos or personalised ranking"
+      - Finished inside the time
+    explain: "The first quarter shapes everything after it. Searches dwarf reviews and places hardly ever move, so the design leans on an index built for reading and on caching. Name that ratio out loud with your numbers. If a check missed, rehearse that line before the next round. Say: \"Read-heavy: searches dwarf reviews, and places rarely change.\""
+    source: https://www.hellointerview.com/learn/system-design/problem-breakdowns/yelp
+
+  - id: np-02
+    type: estimate
+    bloom: apply
+    prompt: Searches on a popular nearby-places app. Estimate the busiest second.
+    generator:
+      kind: peak_rps
+      params:
+        users: [5000000, 50000000]
+        actions: [2, 10]
+    explain: "Searches a day, divided by about 100,000 seconds, times 10 for the peak. Reviews are a small share of that and places barely change, so this number sizes the search index, the cache and the servers, not the database's writes. Round hard and say the working aloud. Say: \"Searches over 100,000, times ten: that's the peak, and nearly all of it is reads.\""
+    source: https://www.hellointerview.com/learn/system-design/in-a-hurry/core-concepts
+
+  - id: np-03
+    type: write
+    bloom: apply
+    prompt: "Name the core entities, then sketch the API (application programming interface): search near a point by radius, category and words, with paging; get a place's details; post a review."
+    key_points:
+      - "Entities: a place (name, location, category, average rating, review count), a review (place, user, stars, text) and a user"
+      - "GET /places/search with latitude, longitude, radius, category, words, a limit and a cursor; returns a page and the next cursor"
+      - "GET /places/{id} returns the details, the rating and the latest reviews"
+      - "POST /places/{id}/reviews with stars and text; the user comes from the token"
+      - "One review per user per place, enforced by the database; a second one returns 409 Conflict"
+      - Results page with a cursor, so deep pages stay cheap and nothing repeats
+    model: "Entities: Place (id, name, location, category, average rating, review count), Review (place, user, stars, text, created at) and User. GET /places/search?lat=&lng=&radius=&category=&q=&limit=20&cursor= returns a page of places and nextCursor. GET /places/{id} returns the details, the rating and recent reviews. POST /places/{id}/reviews takes stars and text; the user comes from the token, and a second review of the same place returns 409."
+    explain: "Three verbs carry this product, and one of them is nearly all the traffic: search. Put every filter on that one endpoint and page it with a cursor, so a long scroll stays cheap. Keep the rating on the place, so a search never adds up reviews. Say: \"Entities first; search is the hot endpoint, and reviews are the rare write.\""
+    source: https://www.hellointerview.com/learn/system-design/core-concepts/api-design
+
+  - id: np-04
+    type: fill
+    bloom: apply
+    prompt: "Land the design end to end. Drag each part into its box: what answers \"near here\" with filters, the source of truth, how those two stay in step, and what saves repeat work in busy areas."
+    diagram:
+      width: 640
+      height: 300
+      nodes:
+        - {id: apps, label: Mobile and web apps, x: 10, y: 126}
+        - {id: search, label: Search service, x: 160, y: 40}
+        - {id: writes, label: Place and review service, x: 160, y: 212}
+        - {id: s-cache, label: "?", x: 380, y: 10}
+        - {id: s-index, label: "?", x: 380, y: 126}
+        - {id: s-db, label: "?", x: 330, y: 242}
+        - {id: s-feed, label: "?", x: 510, y: 242}
+      edges:
+        - [apps, search]
+        - [apps, writes]
+        - [search, s-cache, by cell]
+        - [search, s-index, on a miss]
+        - [writes, s-db, save]
+        - [s-db, s-feed]
+        - [s-feed, s-index]
+    slots:
+      s-cache: Cache of results by cell
+      s-index: Geo search index
+      s-db: "Database: places, reviews"
+      s-feed: Change data capture
+    palette:
+      - Cache of results by cell
+      - Geo search index
+      - "Database: places, reviews"
+      - Change data capture
+      - WebSocket server
+      - Graph database
+      - Blob storage
+    explain: "Search checks a cache keyed by cell and filters, and on a miss asks the geo search index, which applies distance, category and words in one query. The database is the truth for places and reviews; change data capture (CDC) streams each change into the index. Say: \"The database is the truth, a change feed keeps the geo index current, and busy cells are cached.\""
+    source: https://www.hellointerview.com/learn/system-design/deep-dives/elasticsearch
+
+  - id: np-05
+    type: duel
+    bloom: evaluate
+    prompt: "Deep dive: say a city-centre square kilometre holds 5,000 places, while a 20 km square in the hills holds a dozen. You want every search to read a similar, small number of places. How do you divide the map into cells?"
+    choices:
+      - "A quadtree: split any cell holding more than about 100 places into four"
+      - Equal cells everywhere, sized for the city centre
+      - Equal cells everywhere, sized for the countryside
+    correct: 0
+    reasons:
+      - Cells shrink where places crowd together and stay large where they're sparse
+      - Equal cells make every search read the same number of places
+      - Small cells mean a search never needs the cells around it
+    reason: 0
+    costs:
+      - "More to build and keep current: cells split as places are added"
+      - Every search has to read every place in the city
+      - Results can no longer be sorted by distance
+    cost: 0
+    explain: "Equal cells sized for the centre make a countryside search open many near-empty cells; sized for the countryside, one city cell holds thousands. A quadtree splits only crowded cells, so no leaf holds more than a set number. Either way, read the user's cell and its neighbours, then keep places within the exact distance. Say: \"Quadtree for uneven density; cell plus neighbours, then exact distance.\""
+    source: https://en.wikipedia.org/wiki/Quadtree
+
+  - id: np-06
+    type: multi
+    bloom: analyse
+    prompt: "Deep dive: someone posts a review, and that place's rating shows on every search result it appears in. Each person may review a place only once. Which of these belong in the design?"
+    options:
+      - A unique constraint on user and place together, so a second review is refused
+      - A review count and star total on the place, updated in the same transaction
+      - An edit swaps the old stars for the new ones in the place's total
+      - Average all of a place's reviews each time it appears in a search
+      - Check in code for an earlier review, then insert, with no constraint
+      - Let the app send the place's new average along with the review
+    correct: [0, 1, 2]
+    explain: "Two requests from one user at once can both pass a check-then-insert, so only a unique constraint truly stops a second review. A count and a total on the place, changed with the review, make each rating on a results page one read; a burst on one place can be folded in small batches. Never trust a sum sent by the app. Say: \"Unique on user and place; the rating is precomputed on write.\""
+    source: https://www.postgresql.org/docs/current/ddl-constraints.html
+
+  - id: np-boss
+    type: duel
+    bloom: evaluate
+    prompt: "Deep dive: how does search answer \"vegan brunch, cafés, within 2 km\" across 10 million places, fast, with distance, category and words all applied?"
+    choices:
+      - A search index with geo queries, such as Elasticsearch, fed from the database
+      - "The places table, with separate latitude and longitude indexes, and LIKE for words"
+      - Load every place into each server's memory and measure the distance to each
+    correct: 0
+    reasons:
+      - One query narrows by area, category and words together, touching only nearby matches
+      - Two separate indexes together pick out a circle on the map
+      - Places rarely change, so measuring all of them is cheap
+    reason: 0
+    costs:
+      - A second copy of the data to keep in step, so changes appear after a short lag
+      - Every search reads every place on Earth
+      - Results can no longer be sorted by rating
+    cost: 0
+    explain: "Separate latitude and longitude indexes each match a strip across the whole map, and LIKE with a leading wildcard can't use a normal index, so both read far too many rows. A geo search index applies distance, category and words in one query, kept in step by CDC. PostGIS with full-text search does the same inside PostgreSQL. Say: \"A geo search index fed by the database: one query, every filter.\""
+    source: https://www.hellointerview.com/learn/system-design/deep-dives/elasticsearch

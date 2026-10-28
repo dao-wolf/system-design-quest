@@ -1,0 +1,6 @@
+Playwright
+Stryker
+axe
+pnpm
+CodeScene
+shadow root

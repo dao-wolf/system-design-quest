@@ -1,0 +1,190 @@
+chapter: 6
+slug: consistency
+title: Consistency and CAP
+emoji: "⚖️"
+pillar: Core concepts
+blurb: Know what CAP really forces, then choose strong or eventual consistency feature by feature, never for the whole system.
+boss: cons-boss
+challenges:
+  - id: cons-01
+    type: recall
+    bloom: remember
+    prompt: "In one breath: what does the CAP theorem (consistency, availability, partition tolerance) actually force you to choose?"
+    answer: When the network splits between nodes, a distributed system must either refuse some requests to stay consistent or keep answering and risk stale data. Splits will happen, so partition tolerance isn't optional.
+    explain: "\"Pick two of three\" misleads, because no network is immune to splits. The real choice bites only during a split: stay correct or stay up. Say: \"Partitions happen, so for this feature I'd favour consistency (or availability), because…\""
+    source: https://en.wikipedia.org/wiki/CAP_theorem
+
+  - id: cons-02
+    type: multi
+    bloom: understand
+    prompt: Which of these are true? (ACID is the atomicity, consistency, isolation and durability that database transactions promise.)
+    options:
+      - Network splits will happen, so the real choice is consistency or availability during one
+      - A system can pick consistency and availability and skip partition tolerance
+      - CAP's C means every read sees the latest write, or gets an error
+      - CAP's C is the same promise as the C in ACID
+      - ACID's C means a transaction leaves the data obeying its rules, such as constraints
+      - Choosing availability means reads are never stale
+    correct: [0, 2, 4]
+    explain: Same letter, different promise. CAP's C is about copies agreeing, so a read reflects the latest write. ACID's C is about one database's rules still holding after a transaction. Choosing availability means accepting stale reads during a split. Say which C you mean when you use the word.
+    source: https://en.wikipedia.org/wiki/CAP_theorem
+
+  - id: cons-03
+    type: recall
+    bloom: understand
+    prompt: CAP only talks about network splits. What does PACELC (if Partition, Availability or Consistency; Else, Latency or Consistency) add, and why does it matter on a normal day?
+    answer: "The \"else\": with no split at all, you still trade latency against consistency. Waiting for replicas to confirm a write, or to agree on a read, makes every request slower."
+    explain: "Splits are rare, but the latency cost of strong consistency is paid on every request. That's why many databases default to eventually consistent reads. Say: \"Even without a partition, strong reads cost latency, so I'd only pay that where a stale read hurts.\""
+    source: https://en.wikipedia.org/wiki/PACELC_design_principle
+
+  - id: cons-04
+    type: duel
+    bloom: evaluate
+    prompt: "A team workspace product has prepaid credit balances, invoices, an activity feed and like counts. The interviewer asks: \"Is your system CP or AP?\" (consistent or available when the network splits). Best answer?"
+    choices:
+      - "\"CP: correctness matters most.\""
+      - "\"AP: uptime matters most.\""
+      - "\"Neither as a whole: strong for balances and invoices, eventual for feed and likes.\""
+    correct: 2
+    reasons:
+      - A stale read costs a different amount in each feature, so each gets its own choice
+      - Mixed models are always cheaper to run
+      - Interviewers mark down any system that is fully CP
+    reason: 0
+    costs:
+      - Two consistency models to explain, test and operate
+      - Every read in the system gets slower
+      - The feed can no longer be cached
+    cost: 0
+    explain: "One label for the whole system forces the wrong trade on half the features: a stale balance costs money, a stale like count costs nothing. Ask per feature \"what breaks if this read is a few seconds old?\" Say: \"Strong where money or totals live, eventual everywhere else.\""
+    source: https://www.hellointerview.com/learn/system-design/in-a-hurry/core-concepts
+
+  - id: cons-05
+    type: fill
+    bloom: apply
+    prompt: Fill the boxes. A confirmed write must survive losing the leader, and balance reads must see the latest write. Feed reads can lag a few seconds.
+    diagram:
+      width: 640
+      height: 300
+      nodes:
+        - {id: app, label: App server, x: 20, y: 126}
+        - {id: s-leader, label: "?", x: 250, y: 40}
+        - {id: s-sync, label: "?", x: 490, y: 40}
+        - {id: s-async, label: "?", x: 250, y: 222}
+      edges:
+        - [app, s-leader, "writes, balance reads"]
+        - [s-leader, s-sync, waits for its confirmation]
+        - [s-leader, s-async, copies later]
+        - [app, s-async, feed reads]
+    slots:
+      s-leader: Leader database
+      s-sync: Synchronous replica
+      s-async: Asynchronous replica
+    palette:
+      - Leader database
+      - Synchronous replica
+      - Asynchronous replica
+      - Cache
+      - Message queue
+      - Load balancer
+    explain: "A synchronous replica holds every confirmed write, so promoting it loses nothing, but each write waits for it. An asynchronous one keeps writes fast and serves reads that may lag, which suits the feed. Say: \"One synchronous replica for safety, asynchronous ones for read scale.\""
+    source: https://github.com/donnemartin/system-design-primer
+
+  - id: cons-06
+    type: multi
+    bloom: analyse
+    prompt: Five replicas (N = 5). A write counts once W replicas confirm it; a read asks R replicas. Which settings guarantee every read overlaps the latest confirmed write?
+    options:
+      - W = 3, R = 3
+      - W = 2, R = 2
+      - W = 5, R = 1
+      - W = 1, R = 1
+      - W = 4, R = 2
+      - W = 2, R = 3
+    correct: [0, 2, 4]
+    explain: "Reads and writes overlap when R + W > N: at least one replica in every read saw the latest write. 2 + 3 = 5 is not enough. W = 5 makes reads cheap, but a write fails if any replica is down. Say: \"A quorum: R plus W greater than N, so every read overlaps the last write.\""
+    source: https://en.wikipedia.org/wiki/Quorum_(distributed_computing)
+
+  - id: cons-07
+    type: multi
+    bloom: analyse
+    prompt: A user renames their workspace, reloads, and sees the old name. Reads go to replicas that are updated asynchronously. Which two fixes give that user read-your-writes without making every read strong?
+    options:
+      - For a short time after a user writes, send that user's reads to the leader
+      - Ask for a strongly consistent read only on the page the user just edited
+      - Send every read in the system to the leader
+      - Put a cache in front of the replicas
+      - Add more replicas
+      - Make the rename asynchronous too
+    correct: [0, 1]
+    explain: "Read-your-writes only promises that writers see their own change; everyone else can lag. So aim the fix at that user and that page. Some databases let you choose per read: DynamoDB reads are eventually consistent by default, strongly consistent on request at twice the cost. Say: \"Read-your-writes for the editor, eventual for everyone else.\""
+    source: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.ReadConsistency.html
+
+  - id: cons-08
+    type: write
+    bloom: apply
+    prompt: "The interviewer asks: \"You replicate asynchronously. What happens if the leader dies?\" Answer in three or four sentences."
+    key_points:
+      - Writes confirmed to the client but not yet copied can be lost
+      - A replica is promoted to leader, and it may be slightly behind
+      - Says which features can live with that, such as the feed or counters
+      - For money, a synchronous replica, accepting slower writes
+    model: A replica gets promoted. Anything the old leader confirmed but hadn't copied yet is lost, so the new leader may be a few writes behind. For the feed and counters that's fine. For balances and invoices I'd keep one synchronous replica, so a confirmed write always exists twice, and accept the slower write.
+    explain: Asynchronous replication buys fast writes by confirming before the copy exists, so a failover can drop the newest writes. Naming the loss and where it's acceptable shows you know the trade. Say the risk, the feature that tolerates it, and the fix for the one that doesn't.
+    source: https://github.com/donnemartin/system-design-primer
+
+  - id: cons-09
+    type: lightning
+    bloom: understand
+    prompt: When you hear this, reach for what? 90 seconds.
+    pairs:
+      - ["The network splits and the data must stay correct", "Favour consistency: refuse or wait"]
+      - ["The network splits and the page must stay up", "Favour availability: serve possibly stale data"]
+      - ["No split, but every millisecond counts", "PACELC: trade some consistency for latency"]
+      - ["A user must see their own edit on reload", "Read-your-writes"]
+      - ["A confirmed write must survive losing the leader", "Synchronous replication"]
+      - ["Writes must be fast and a little lag is fine", "Asynchronous replication"]
+      - ["Reads must overlap the latest write across replicas", "A quorum: R + W > N"]
+      - ["Like counts, view counters, a feed", "Eventual consistency"]
+      - ["An account balance or an invoice total", "Strong consistency"]
+    explain: Each pairing is a trade you should name without stopping to think, which leaves your time for the follow-up question. If one was slow, say that pairing out loud, with what it costs, before the next round.
+    source: https://www.hellointerview.com/learn/system-design/core-concepts/cap-theorem
+
+  - id: cons-boss
+    type: sticker
+    bloom: evaluate
+    prompt: "A team workspace product. Sticker each feature with what it needs; a box can take more than one sticker. Ask of each one: what breaks if this read is a few seconds old?"
+    diagram:
+      width: 640
+      height: 300
+      nodes:
+        - {id: app, label: Workspace app, x: 260, y: 126}
+        - {id: balance, label: Credit balance, x: 20, y: 20}
+        - {id: invoice, label: Invoice total, x: 20, y: 126}
+        - {id: likes, label: Like count, x: 20, y: 232}
+        - {id: views, label: Doc view counter, x: 500, y: 20}
+        - {id: feed, label: Activity feed, x: 500, y: 126}
+        - {id: profile, label: Edit own profile, x: 500, y: 232}
+        - {id: search, label: Search results, x: 260, y: 232}
+      edges:
+        - [app, balance]
+        - [app, invoice]
+        - [app, likes]
+        - [app, views]
+        - [app, feed]
+        - [app, profile]
+        - [app, search]
+    stickers:
+      - Strong consistency
+      - Eventual is fine
+      - Read-your-writes
+    answers:
+      balance: [Strong consistency]
+      invoice: [Strong consistency]
+      likes: [Eventual is fine]
+      views: [Eventual is fine]
+      feed: [Eventual is fine]
+      profile: [Read-your-writes, Eventual is fine]
+      search: [Eventual is fine]
+    explain: "Money and totals need strong consistency: a stale balance can show credit that's already gone, and an invoice total must match its lines. Counters, feeds and search can lag seconds harmlessly, so they stay fast and available. The profile needs read-your-writes for its editor only. Say: \"Strong where a stale read costs money; eventual everywhere else.\""
+    source: https://www.hellointerview.com/learn/system-design/core-concepts/cap-theorem

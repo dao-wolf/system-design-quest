@@ -1,0 +1,164 @@
+chapter: 11
+slug: file-sync
+kind: quest
+title: File storage and sync (like Dropbox)
+emoji: "📁"
+pillar: Quests
+builds_on: [1, 3, 4, 8]
+blurb: "Keep every device's files in step. Requirements, numbers, API, the design, then the deep dives: big uploads, sync and clashing edits."
+boss: fs-boss
+challenges:
+  - id: fs-01
+    type: sprint
+    bloom: create
+    minutes: 10
+    prompt: "Requirements for a file storage and sync service (people save files in a folder that matches on every device, and share some). Out loud, against the clock: read it back, who uses it and what they do, your three hard parts, how busy (with the peak), what can't break, what's out."
+    checks:
+      - Read the problem back in one line
+      - "Named the users and what they do: save, edit offline, see changes on other devices, share"
+      - "Picked my own three hard parts, such as big uploads, fast sync across devices, and offline edits that clash"
+      - "Sized it: users, files a day, typical and largest file size, and the peak"
+      - "Said what can't break: a saved file is never lost or silently overwritten"
+      - Said "I'll assume…" for scope, instead of asking "do you want…?"
+      - "Said what's out of scope, such as editing inside the browser or searching file contents"
+      - Finished inside the time
+    explain: "This product turns on three things: big files, many devices and edits made while offline. Say early what can't break: a saved file is never lost or silently overwritten, while a few seconds' delay before another device sees it is fine. If a check missed, rehearse that line before the next round. Say: \"Never lose a file; sync within seconds is good enough.\""
+    source: https://www.hellointerview.com/learn/system-design/problem-breakdowns/dropbox
+
+  - id: fs-02
+    type: estimate
+    bloom: apply
+    prompt: "At the peak, devices download changed file chunks of a few MB each. Estimate the outbound bandwidth. (KB, MB and GB are kilobytes, megabytes and gigabytes; each is 1,000 times the last.)"
+    generator:
+      kind: bandwidth
+      params:
+        rps: [500, 20000]
+        kb: [1000, 5000]
+    explain: "Responses a second times the size of each, then divide by 1,000 to turn KB into MB. Thousands of multi-MB chunks a second come to many GB a second, too much for app servers to carry. The bytes come from object storage through a CDN (content delivery network) on signed links, and app servers handle only small metadata calls. Say: \"Bytes from storage and the CDN; the app tier moves metadata.\""
+    source: https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-presigned-url.html
+
+  - id: fs-03
+    type: write
+    bloom: apply
+    prompt: "Name the core entities, then sketch the API (application programming interface): start an upload, get upload links, commit it, list changes since a cursor, and download a file."
+    key_points:
+      - "Entities: file (path, owner), version (number, base version, ordered chunk hashes), chunk (hash, size) and device"
+      - "POST /uploads with the path, base version and chunk hashes; returns an upload ID (identifier)"
+      - "It also returns presigned URLs (signed, short-lived web addresses), one per chunk storage lacks"
+      - "POST /uploads/{id}/commit makes the new version live only once every chunk is stored"
+      - "GET /changes?cursor=… returns what changed since then, plus the next cursor to save"
+      - "GET /files/{id} returns metadata and short-lived download links; the user comes from the token"
+    model: "Entities: File (ID, owner, path, current version), Version (file, number, base version, chunk hashes in order), Chunk (hash, size) and Device. POST /uploads takes the path, base version and chunk hashes; it returns an upload ID and presigned URLs for the chunks storage lacks. POST /uploads/{id}/commit creates the version once every chunk is there. GET /changes?cursor=c returns changes and the next cursor. GET /files/{id} returns metadata and download links."
+    explain: "Start, send, then commit keeps big bytes off your servers and stops a half-sent file from ever looking finished. The changes feed with a cursor is what sync runs on, so name it early. Say: \"The API moves metadata; storage moves the bytes.\""
+    source: https://www.hellointerview.com/learn/system-design/in-a-hurry/delivery
+
+  - id: fs-04
+    type: fill
+    bloom: apply
+    prompt: "Land the design end to end. Drag each part into its box: where the chunks live, the source of truth for files and versions, what serves downloads near the user, and what tells other devices to sync."
+    diagram:
+      width: 640
+      height: 300
+      nodes:
+        - {id: apps, label: Desktop and phone apps, x: 10, y: 126}
+        - {id: s-cdn, label: "?", x: 230, y: 10}
+        - {id: s-blob, label: "?", x: 480, y: 10}
+        - {id: app, label: "App servers: metadata API", x: 230, y: 126}
+        - {id: s-meta, label: "?", x: 480, y: 126}
+        - {id: s-notify, label: "?", x: 230, y: 242}
+      edges:
+        - [apps, app, metadata]
+        - [apps, s-blob, upload chunks]
+        - [s-blob, s-cdn]
+        - [s-cdn, apps, download]
+        - [app, s-meta, "files, versions"]
+        - [app, s-notify]
+        - [s-notify, apps, nudge]
+    slots:
+      s-blob: "Object storage: chunks"
+      s-meta: Metadata database
+      s-cdn: CDN
+      s-notify: Notification service
+    palette:
+      - "Object storage: chunks"
+      - Metadata database
+      - CDN
+      - Notification service
+      - "Database: file bytes as blobs"
+      - Nightly sync job
+      - Search index
+    explain: "Chunks go up to object storage on presigned URLs and come back through the CDN, so app servers handle only small metadata calls. The metadata database records files, versions and chunk lists: it is the truth sync reads. A notification service nudges other devices to ask what changed. Bytes bloat a database; a nightly job is too slow. Say: \"Bytes to storage, truth in metadata, a nudge to sync.\""
+    source: https://www.hellointerview.com/learn/system-design/problem-breakdowns/dropbox
+
+  - id: fs-05
+    type: duel
+    bloom: evaluate
+    prompt: "A laptop and a phone both edit the same document offline, each starting from version 7. The laptop syncs first and makes version 8. Then the phone syncs. What happens to the phone's edit?"
+    choices:
+      - "Keep both: save it as a conflicted copy next to the file"
+      - "Last write wins: it replaces version 8"
+      - Merge the two versions' bytes automatically
+      - Reject it and drop the phone's changes
+    correct: 0
+    reasons:
+      - "The phone's commit was based on version 7, so the server can see both devices changed it"
+      - Conflicted copies take less storage
+      - The later edit is always the one the person wanted
+      - Any two files can be merged byte by byte
+    reason: 0
+    costs:
+      - The person compares the two copies and tidies up by hand
+      - Every edit needs a lock from the server first
+      - "One device's work is silently lost"
+    cost: 0
+    explain: "Each commit names the version it started from. If the file has moved on since, both devices changed it: replacing one silently loses work, and an arbitrary file's bytes can't be merged safely. A conflicted copy loses nothing, and the person merges them. Locks fail when devices are offline. Say: \"Commit against a base version; on a clash, keep both.\""
+    source: https://en.wikipedia.org/wiki/File_synchronization
+
+  - id: fs-06
+    type: multi
+    bloom: analyse
+    prompt: "A small part of a 1 GB file changes on a laptop. The phone should show it within seconds, without wasting data or requests. Which of these help?"
+    options:
+      - Upload only the chunks whose hashes changed
+      - Skip any chunk whose hash storage already holds
+      - The phone asks for every change since its saved cursor
+      - A long poll or WebSocket nudge tells the phone when to ask
+      - Re-upload the whole file, compressed
+      - The phone lists the whole folder every second
+      - "Send the file's bytes inside the nudge"
+      - "Compare each file's modified time with the phone's clock"
+    correct: [0, 1, 2, 3]
+    explain: "Chunk hashes show what changed, and skipping hashes storage already holds removes duplicates, so a small edit moves a few MB, not 1 GB. The metadata database logs changes in order; the phone keeps a cursor into that log, and a nudge says when to read it. Polling wastes requests, nudges should stay small, and device clocks drift. Say: \"Changed chunks up, a nudge, then changes since my cursor.\""
+    source: https://www.hellointerview.com/learn/system-design/problem-breakdowns/dropbox
+
+  - id: fs-boss
+    type: flaw
+    bloom: evaluate
+    prompt: "Big uploads on patchy Wi-Fi fail near the end and start again from zero, and the app servers slow down whenever people upload. Find the box to change, then pick the fix."
+    diagram:
+      width: 640
+      height: 300
+      nodes:
+        - {id: apps, label: Desktop and phone apps, x: 10, y: 126}
+        - {id: cdn, label: CDN, x: 230, y: 10}
+        - {id: storage, label: Object storage, x: 480, y: 10}
+        - {id: app, label: App servers, x: 230, y: 126}
+        - {id: meta, label: Metadata database, x: 480, y: 126}
+        - {id: notify, label: Notification service, x: 230, y: 242}
+      edges:
+        - [apps, app, whole file]
+        - [app, storage, write file]
+        - [storage, cdn]
+        - [cdn, apps, download]
+        - [app, meta, versions]
+        - [app, notify]
+        - [notify, apps, nudge]
+    flaw: app
+    fixes:
+      - "Chunk files; send missing chunks straight to storage on presigned URLs, then commit"
+      - Add more app servers and raise the upload timeout
+      - "Compress each file before it's sent"
+      - Save the files in the metadata database instead
+    fix: 0
+    explain: "Relaying every byte through app servers ties them up for minutes per upload, and one dropped connection loses the whole file. Split files into chunks of a few MB: the server hands out presigned URLs only for chunks storage lacks, the app sends them straight there and retries just a failed one, then a commit makes the version live. Say: \"Chunks straight to storage, resume per chunk, then commit.\""
+    source: https://docs.aws.amazon.com/AmazonS3/latest/userguide/mpuoverview.html
