@@ -25,8 +25,10 @@ const CSP = [
 
 // /types/ is a second host page. It loads the built element from /types/, so the element finds the fixture
 // chapters.json beside it instead of the real one: one chapter for each challenge type, with known answers.
+// /coach/ hosts the element without "static", so it looks for a local coach server; its tests answer for one.
 const routes = {
   "/": "tests/e2e/fixtures/index.html",
+  "/coach/": "tests/e2e/fixtures/coach.html",
   "/types/": "tests/e2e/fixtures/types.html",
   "/types/chapters.json": "tests/e2e/fixtures/chapters.json",
 };
