@@ -5,6 +5,9 @@ name: Release
 # - the npm package @daowolf/system-design-quest, staged by trusted publishing with provenance. It goes
 #   public only when a maintainer approves it with two-factor authentication (npm stage approve, or on
 #   npmjs.com). Sites pin a version and their lockfile checks its hash.
+# Order: the GitHub release is created as a draft, the package is staged on npm, and the release is
+# published last. Publishing makes the release immutable, so if npm fails first, only a draft is left to
+# delete before re-running, and the version number isn't burned.
 on:
   push:
     tags: ["v*"]
@@ -66,7 +69,7 @@ jobs:
           retention-days: 7
 
   release:
-    name: Publish
+    name: Draft the GitHub release
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -82,13 +85,12 @@ jobs:
       - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: release/*
-      - name: Publish the release
+      # A draft until npm has the package: see "Publish the GitHub release" below.
+      - name: Create the release as a draft
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
-        run: |
-          gh release create "$TAG" release/* --repo "$GITHUB_REPOSITORY" --draft --title "$TAG" --generate-notes --verify-tag
-          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false
+        run: gh release create "$TAG" release/* --repo "$GITHUB_REPOSITORY" --draft --title "$TAG" --generate-notes --verify-tag
 
   npm:
     name: Stage on npm
@@ -112,3 +114,17 @@ jobs:
       # The leading ./ matters: npm reads "package/x.tgz" as the GitHub repo shorthand "user/repo".
       - name: Stage the package
         run: npm stage publish ./package/*.tgz --provenance --access public
+
+  publish:
+    name: Publish the GitHub release
+    needs: npm
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: Publish the draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false
