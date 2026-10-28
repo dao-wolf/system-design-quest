@@ -6,6 +6,7 @@ import {
   score,
   progress,
   generate,
+  fmt,
   runOrder,
   cleanProfile,
   holdActive,
@@ -235,4 +236,92 @@ test("run order puts the boss last", () => {
     runOrder(ch).map((c) => c.id),
     ["a", "c", "b"],
   );
+});
+
+test("fmt: billions and millions in words, big numbers with commas, small ones to three figures", () => {
+  assert.equal(fmt(2.5e9), "2.5 billion");
+  assert.equal(fmt(1e9), "1 billion");
+  assert.equal(fmt(3.2e6), "3.2 million");
+  assert.equal(fmt(1e6), "1 million");
+  assert.equal(fmt(123456), "123,456");
+  assert.equal(fmt(10000), "10,000");
+  assert.equal(fmt(999), "999");
+  assert.equal(fmt(12.345), "12.3");
+});
+
+test("an unknown challenge type or estimate kind is an error, never a score", () => {
+  assert.throws(() => check({ type: "riddle" }, {}), /unknown type riddle/);
+  assert.throws(() => check({ type: "toString" }, {}), /unknown type toString/);
+  assert.throws(() => generate({ kind: "guess", params: {} }, 1), /unknown generator guess/);
+});
+
+test("badges: each is earned exactly at its threshold", () => {
+  const ids = (events, b = bundle) => progress(b, events).badges.map((x) => x.id);
+  const sure = (n) => Array.from({ length: n }, (_, i) => ans(`s${i}`, "2026-10-30", true, { confidence: "sure" }));
+  const bosses = ["b1", "b2", "b3"].map((id) => ans(id, "2026-10-30", true));
+  assert.deepEqual(ids([]), []);
+  assert.deepEqual(ids([], { chapters: [] }), []);
+  assert.deepEqual(ids([ans("a", "2026-10-30", true, { combo: 4 })]), []);
+  assert.deepEqual(ids([ans("a", "2026-10-30", true, { combo: 5 })]), ["combo-5"]);
+  assert.deepEqual(ids(sure(9)), []);
+  assert.deepEqual(ids([...sure(9), ans("x", "2026-10-30", false, { confidence: "sure" })]), []);
+  assert.deepEqual(ids(sure(10)), ["sure-shot"]);
+  assert.deepEqual(ids([ans("x", "2026-10-30", false, { second_chance: true })]), []);
+  assert.deepEqual(ids([ans("x", "2026-10-30", true, { second_chance: true })]), ["comeback"]);
+  assert.deepEqual(ids(bosses.slice(0, 2)), ["first-boss"]);
+  const everything = [
+    ...bosses,
+    ans("a", "2026-10-30", true, { combo: 5 }),
+    ...sure(10),
+    ans("x", "2026-10-30", true, { second_chance: true }),
+  ];
+  assert.deepEqual(progress(bundle, everything).badges, [
+    { id: "first-boss", label: "First boss beaten" },
+    { id: "combo-5", label: "Five in a row" },
+    { id: "sure-shot", label: "Ten sure and right" },
+    { id: "comeback", label: "Got it on the second chance" },
+    { id: "all-bosses", label: "Every boss beaten" },
+  ]);
+});
+
+test("weekdays: days played out of the last five weekdays; the weekend never counts", () => {
+  // Monday 2 November 2026: the last five weekdays are 27 to 30 October and 2 November.
+  const days = ["2026-11-02", "2026-11-01", "2026-10-31", "2026-10-30", "2026-10-27", "2026-10-26"];
+  const p = progress(
+    bundle,
+    days.map((d) => ans("a", d, true)),
+    new Date("2026-11-02T10:00:00"),
+  );
+  assert.equal(p.weekdays, 3);
+});
+
+test("weakest: the five challenges missed most at the first try, most missed first", () => {
+  const misses = { a: 3, b: 1, c: 2, d: 4, e: 1, f: 5 };
+  const events = Object.entries(misses).flatMap(([id, n]) =>
+    Array.from({ length: n }, () => ans(id, "2026-10-30", false)),
+  );
+  events.push(ans("a", "2026-10-30", false, { second_chance: true }), ans("b", "2026-10-30", true));
+  assert.deepEqual(progress(bundle, events).weakest, [
+    { id: "f", misses: 5 },
+    { id: "d", misses: 4 },
+    { id: "a", misses: 3 },
+    { id: "c", misses: 2 },
+    { id: "b", misses: 1 },
+  ]);
+});
+
+test("with every open chapter beaten, the recommendation is the one with the lowest first-try accuracy", () => {
+  const b = {
+    chapters: [
+      { chapter: 1, slug: "one", boss: "b1", challenges: [{ id: "x1" }, { id: "b1" }] },
+      { chapter: 2, slug: "two", boss: "b2", challenges: [{ id: "x2" }, { id: "b2" }] },
+    ],
+  };
+  const events = [
+    ans("b1", "2026-10-30", true),
+    ans("x1", "2026-10-30", true),
+    ans("b2", "2026-10-30", true),
+    ans("x2", "2026-10-30", false),
+  ];
+  assert.equal(recommend(b, progress(b, events)).slug, "two");
 });
