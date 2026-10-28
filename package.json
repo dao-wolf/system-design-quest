@@ -1,10 +1,39 @@
 {
-  "name": "system-design-quest",
-  "version": "1.0.0",
-  "private": true,
+  "name": "@daowolf/system-design-quest",
+  "version": "1.1.0",
   "description": "Practise system design interviews as a game: trade-off duels, diagrams, estimates and whole-product quests.",
-  "license": "MIT",
+  "keywords": [
+    "system-design",
+    "interview",
+    "practice",
+    "game",
+    "web-component",
+    "custom-element"
+  ],
+  "license": "(MIT AND CC-BY-4.0)",
+  "homepage": "https://github.com/dao-wolf/system-design-quest#readme",
+  "bugs": "https://github.com/dao-wolf/system-design-quest/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dao-wolf/system-design-quest.git"
+  },
   "type": "module",
+  "sideEffects": true,
+  "exports": {
+    ".": "./dist/element.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist/element.js",
+    "dist/element.js.map",
+    "dist/style.css",
+    "dist/chapters.json",
+    "content/LICENSE.md"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "packageManager": "pnpm@10.26.1",
   "engines": {
     "node": ">=22"

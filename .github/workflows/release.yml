@@ -1,8 +1,10 @@
 name: Release
 
-# A v* tag builds the element, tests it, and publishes it as an immutable GitHub
-# release: the files, a SHA256SUMS file and signed build provenance for each file.
-# Sites pull a release by its tag and check all three before using it.
+# A v* tag builds the element, tests it, and publishes it two ways:
+# - an immutable GitHub release: the files, a SHA256SUMS file and signed build provenance for each file;
+# - the npm package @daowolf/system-design-quest, staged by trusted publishing with provenance. It goes
+#   public only when a maintainer approves it with two-factor authentication (npm stage approve, or on
+#   npmjs.com). Sites pin a version and their lockfile checks its hash.
 on:
   push:
     tags: ["v*"]
@@ -24,6 +26,15 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: pnpm
+      - name: Check the tag matches package.json
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version=$(node -p 'require("./package.json").version')
+          if [ "$TAG" != "v$version" ]; then
+            echo "::error::Tag $TAG doesn't match package.json version $version."
+            exit 1
+          fi
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.12"
@@ -41,6 +52,17 @@ jobs:
         with:
           name: release
           path: release/
+          retention-days: 7
+      # The npm package holds the same built files (package.json "files"), packed once here so the
+      # publish job stages exactly what was tested.
+      - name: Pack the npm package
+        run: |
+          mkdir package
+          pnpm pack --pack-destination package
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: package
+          path: package/
           retention-days: 7
 
   release:
@@ -67,3 +89,25 @@ jobs:
         run: |
           gh release create "$TAG" release/* --repo "$GITHUB_REPOSITORY" --draft --title "$TAG" --generate-notes --verify-tag
           gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false
+
+  npm:
+    name: Stage on npm
+    needs: release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write # trusted publishing: npm checks this workflow's GitHub identity, so no token is stored
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: package
+          path: package
+      # Node 24's npm (11.19 or later) supports trusted publishing and npm stage.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      # Staged, never published directly: the package's trusted publisher allows only npm stage publish.
+      - name: Stage the package
+        run: npm stage publish package/*.tgz --provenance --access public
