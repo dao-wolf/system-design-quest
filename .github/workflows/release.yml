@@ -35,8 +35,8 @@ jobs:
       - name: Collect the release files
         run: |
           mkdir release
-          cp dist/element.js dist/app.js dist/engine.js dist/style.css dist/chapters.json release/
-          (cd release && sha256sum element.js app.js engine.js style.css chapters.json > SHA256SUMS)
+          cp dist/element.js dist/element.js.map dist/style.css dist/chapters.json release/
+          (cd release && sha256sum element.js element.js.map style.css chapters.json > SHA256SUMS)
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release

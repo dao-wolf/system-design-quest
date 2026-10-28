@@ -26,8 +26,9 @@ knowledge; quests are katas where you design one product end to end.
 <system-design-quest static></system-design-quest>
 ```
 
-Keep `app.js`, `engine.js`, `style.css` and `chapters.json` next to the
-script. Take them from a [release](https://github.com/dao-wolf/system-design-quest/releases).
+Keep `style.css` and `chapters.json` next to the script (and
+`element.js.map`, if you want source maps). Take them from a
+[release](https://github.com/dao-wolf/system-design-quest/releases).
 GitHub signs each release, so you can check where it came from. Add
 `theme="dark"` or `theme="light"` to override the visitor's setting.
 
