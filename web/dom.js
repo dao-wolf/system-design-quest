@@ -41,7 +41,15 @@ export function show(...nodes) {
   // must land on what the player sees.
   const host = ROOT.host || document.body;
   const headerHeight = parseFloat(getComputedStyle(host).scrollMarginTop) || 0;
-  if (host.getBoundingClientRect().top < headerHeight) host.scrollIntoView({ block: "start", behavior: "instant" });
+  if (host.getBoundingClientRect().top < headerHeight) scrollToTop(host);
+}
+function scrollToTop(el) {
+  try {
+    el.scrollIntoView({ block: "start", behavior: "instant" });
+  } catch {
+    // A browser that predates "instant" rejects the option: scroll anyway.
+    el.scrollIntoView(true);
+  }
 }
 export function toast(text) {
   const t = h("div", { class: "toast" }, text);
