@@ -325,3 +325,36 @@ test("with every open chapter beaten, the recommendation is the one with the low
   ];
   assert.equal(recommend(b, progress(b, events)).slug, "two");
 });
+
+test("a chapter is ready for its boss once every other challenge has had a first try, and not after the boss is beaten", () => {
+  const rest = ["a", "b", "c", "d", "e", "f"];
+  const day = "2026-10-30";
+  const ready = (events) => progress(bundle, events).chapters.one.bossReady;
+  assert.equal(ready([]), false);
+  assert.equal(ready(rest.slice(1).map((id) => ans(id, day, true))), false);
+  assert.equal(ready(rest.map((id) => ans(id, day, true))), true);
+  // A miss is still a first try; a second chance on its own is not.
+  assert.equal(ready(rest.map((id) => ans(id, day, id !== "c"))), true);
+  assert.equal(
+    ready([...rest.slice(1).map((id) => ans(id, day, true)), ans("a", day, true, { second_chance: true })]),
+    false,
+  );
+  // A failed boss leaves it ready; a beaten one does not.
+  assert.equal(ready([...rest, "b1"].map((id) => ans(id, day, true, id === "b1" ? { fraction: 0.5 } : {}))), true);
+  assert.equal(ready([...rest, "b1"].map((id) => ans(id, day, true))), false);
+  // A chapter that is only its boss has nothing else to play first.
+  const alone = { chapters: [{ chapter: 1, slug: "solo", boss: "s", challenges: [{ id: "s" }] }] };
+  assert.equal(progress(alone, [ans("s", day, false)]).chapters.solo.bossReady, false);
+});
+
+test("a locked chapter counts how many more bosses open it", () => {
+  const b = {
+    chapters: [1, 2, 3, 4, 5].map((n) => ({ chapter: n, slug: `c${n}`, boss: `b${n}`, challenges: [{ id: `b${n}` }] })),
+  };
+  const need = (events) => Object.values(progress(b, events).chapters).map((c) => c.bossesToOpen);
+  assert.deepEqual(need([]), [0, 0, 1, 2, 3]);
+  assert.deepEqual(need([ans("b2", "2026-10-30", true)]), [0, 0, 0, 1, 2]);
+  assert.deepEqual(need([ans("b1", "2026-10-30", true), ans("b2", "2026-10-30", true)]), [0, 0, 0, 0, 1]);
+  // Jumping in anyway opens that chapter only, and it stops waiting.
+  assert.deepEqual(need([{ kind: "unlock", slug: "c4", chosen: true }]), [0, 0, 1, 0, 3]);
+});
