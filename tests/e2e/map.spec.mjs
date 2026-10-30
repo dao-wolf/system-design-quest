@@ -3,6 +3,7 @@
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { readFileSync } from "node:fs";
+import { OPEN_AT_START } from "../../web/engine.js";
 
 const bundle = JSON.parse(readFileSync("dist/chapters.json", "utf8"));
 const fixture = JSON.parse(readFileSync("tests/e2e/fixtures/chapters.json", "utf8"));
@@ -41,7 +42,7 @@ test("a new player's next action is to play the first chapter, with nothing yet 
   await page.goto("/types/");
   const next = page.locator(".next-up");
   await expect(next.getByRole("button", { name: "Play", exact: true })).toBeVisible();
-  await expect(page.getByText("boss still to beat")).toHaveCount(0);
+  await expect(page.getByText(/still to beat/)).toHaveCount(0);
 });
 
 test("once a chapter is played, the next action is its boss, and the header says what is left", async ({ page }) => {
@@ -65,9 +66,45 @@ test("once a chapter is played, the next action is its boss, and the header says
   await expect(page.getByText(chapter("drill-recall").challenges[1].prompt)).toBeVisible();
 });
 
+// The record as a player who has tried everything but the boss in the first n chapters would have left it.
+const triedAllButTheBoss = (n) =>
+  fixture.chapters
+    .slice(0, n)
+    .flatMap((ch) => ch.challenges.filter((c) => c.id !== ch.boss))
+    .map((c) => ({ v: 1, kind: "answer", challenge: c.id, day: "2026-10-30", correct: true, fraction: 1, points: 10 }));
+
+for (const [n, said] of [
+  [2, "Chapter 1 and Chapter 2 played, bosses still to beat."],
+  [3, "Chapter 1, Chapter 2 and Chapter 3 played, bosses still to beat."],
+  [4, "4 chapters played, bosses still to beat."],
+]) {
+  test(`with ${n} chapters played and their bosses still to beat, the header says so`, async ({ page }) => {
+    await page.addInitScript(
+      (events) => globalThis.localStorage.setItem("sdq-events-v1", JSON.stringify(events)),
+      triedAllButTheBoss(n),
+    );
+    await page.goto("/types/");
+    await expect(page.getByText(said)).toBeVisible();
+  });
+}
+
+// Each locked training chapter waits for as many more bosses as it sits places beyond the ones open at the start.
 test("a locked chapter says how many more bosses open it, and names one to try", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 800 });
   await page.goto("/");
-  await expect(lockedCard(page, 3)).toContainText("Opens when you beat one more boss, such as the Chapter 1 boss");
-  await expect(lockedCard(page, 4)).toContainText("Opens when you beat 2 more bosses, such as the Chapter 1 boss");
+  const training = bundle.chapters.filter((c) => c.kind !== "quest" && !c.open).sort((a, b) => a.chapter - b.chapter);
+  const locked = training.slice(OPEN_AT_START);
+  expect(locked.length).toBeGreaterThan(1);
+  for (const [i, ch] of locked.entries()) {
+    const more = i === 0 ? "one more boss" : `${i + 1} more bosses`;
+    await expect(lockedCard(page, ch.chapter)).toContainText(
+      `Opens when you beat ${more}, such as the Chapter ${training[0].chapter} boss`,
+    );
+  }
   await expect(page.getByText("Opens when you beat another boss")).toHaveCount(0);
+  expect(await page.evaluate(() => globalThis.document.documentElement.scrollWidth <= globalThis.innerWidth)).toBe(
+    true,
+  );
+  const axe = await new AxeBuilder({ page }).include("system-design-quest").analyze();
+  expect(axe.violations.filter((v) => ["serious", "critical"].includes(v.impact))).toEqual([]);
 });

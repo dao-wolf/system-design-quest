@@ -9,6 +9,7 @@ import { renderProfile } from "./profile.js";
 
 const PROFILE_FIELDS = ["name", "company", "role", "interview_type", "interview_date"];
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+const list = (items) => new Intl.ListFormat("en-GB").format(items);
 
 // "Chapter 3" for training, "Quest 2" for quests (numbered in their own order).
 function label(ch) {
@@ -28,13 +29,13 @@ function badgeList(badges) {
 
 // What is left once a chapter's other challenges have been played: its boss. Empty until there is one.
 function bossesLeft(p) {
-  const names = app.bundle.chapters
-    .filter((ch) => p.chapters[ch.slug].bossReady)
-    .sort((a, b) => a.chapter - b.chapter)
-    .map(label);
-  if (!names.length) return "";
-  if (names.length > 3) return `${names.length} chapters and quests played, bosses still to beat. `;
-  return `${names.join(" and ")} played, ${names.length === 1 ? "boss" : "bosses"} still to beat. `;
+  const ready = app.bundle.chapters.filter((ch) => p.chapters[ch.slug].bossReady).sort((a, b) => a.chapter - b.chapter);
+  if (!ready.length) return "";
+  const names =
+    ready.length > 3
+      ? `${ready.length} ${ready.some(isQuest) ? "chapters and quests" : "chapters"}`
+      : list(ready.map(label));
+  return `${names} played, ${ready.length === 1 ? "boss" : "bosses"} still to beat. `;
 }
 
 // The player's name and interview, how many bosses are beaten, and the badges.

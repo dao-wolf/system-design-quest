@@ -308,7 +308,8 @@ function chapterProgress(ch, answers) {
     total: ids.size,
     bossBeaten,
     // Everything before the boss has had a first try, and the boss is still there to beat.
-    bossReady: !bossBeaten && rest.length > 0 && rest.every((c) => tried.has(c.id)),
+    bossReady:
+      !bossBeaten && rest.length > 0 && rest.length < ch.challenges.length && rest.every((c) => tried.has(c.id)),
     stars,
     rank: rankOf(mine.length > 0, stars, bossBeaten),
     accuracy: first.length ? first.filter((e) => e.correct).length / first.length : null,

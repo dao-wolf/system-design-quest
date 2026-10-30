@@ -345,6 +345,9 @@ test("a chapter is ready for its boss once every other challenge has had a first
   // A chapter that is only its boss has nothing else to play first.
   const alone = { chapters: [{ chapter: 1, slug: "solo", boss: "s", challenges: [{ id: "s" }] }] };
   assert.equal(progress(alone, [ans("s", day, false)]).chapters.solo.bossReady, false);
+  // And a boss that is not among the chapter's challenges is nothing to try.
+  const lost = { chapters: [{ chapter: 1, slug: "lost", boss: "gone", challenges: [{ id: "x" }, { id: "y" }] }] };
+  assert.equal(progress(lost, [ans("x", day, true), ans("y", day, true)]).chapters.lost.bossReady, false);
 });
 
 test("a locked chapter counts how many more bosses open it", () => {
