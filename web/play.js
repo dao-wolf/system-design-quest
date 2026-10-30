@@ -80,14 +80,21 @@ export function advance() {
   const run = app.run;
   run.i++;
   if (run.i < run.queue.length) return showChallenge();
-  if (run.phase === "main" && run.misses.length) {
-    run.phase = "second";
-    run.queue = run.misses.map((c) => ({ c, second: true }));
-    run.misses = [];
-    run.i = 0;
-    toast("🔁 Second chance: the ones you missed, for half points");
-    return showChallenge();
-  }
+  if (run.phase === "main" && run.misses.length) return showHandoff();
+  toBossOrResults();
+}
+
+function startSecondChances() {
+  const run = app.run;
+  run.phase = "second";
+  run.queue = run.misses.map((c) => ({ c, second: true }));
+  run.misses = [];
+  run.i = 0;
+  showChallenge();
+}
+
+function toBossOrResults() {
+  const run = app.run;
   if (run.boss && BEFORE_BOSS.has(run.phase)) {
     run.phase = "boss";
     run.queue = [{ c: run.boss, second: false }];
@@ -96,6 +103,43 @@ export function advance() {
     return showChallenge();
   }
   showResults();
+}
+
+// Between the passes: how the first went, what comes next and what it is worth, and a choice. Saving them for later
+// goes on to the boss; the misses wait on the results screen to replay.
+function showHandoff() {
+  const run = app.run;
+  const n = run.misses.length;
+  const start = h("button", { class: "btn", onclick: startSecondChances }, "Start now");
+  show(
+    runBar(run, "First pass done"),
+    h(
+      "div",
+      { class: "card handoff" },
+      h("h3", {}, `First pass done: ${run.right} of ${run.answered} right.`),
+      h("p", {}, `${n} second chance${n === 1 ? "" : "s"} next, for half points:`),
+      h(
+        "ul",
+        {},
+        run.misses.map((c) => h("li", {}, c.prompt)),
+      ),
+      h(
+        "div",
+        { class: "row" },
+        start,
+        h("button", { class: "btn ghost", onclick: toBossOrResults }, "Save for later"),
+      ),
+    ),
+  );
+  start.focus();
+}
+
+// Where the player is: "3 of 9" in the first pass, "Second chance 1 of 4" in the next, "Boss" at the end.
+function runLabel(run) {
+  if (run.phase === "boss") return "Boss";
+  if (run.phase === "single") return "";
+  const at = `${run.i + 1} of ${run.queue.length}`;
+  return run.phase === "second" ? `Second chance ${at}` : at;
 }
 
 function runDots() {
@@ -111,7 +155,7 @@ function runDots() {
   );
 }
 
-function runBar(run) {
+function runBar(run, label) {
   const leave = () => {
     if (confirm("Leave this run? Your answers so far are kept.")) renderMap();
   };
@@ -124,6 +168,8 @@ function runBar(run) {
       h("b", {}, run.chapter ? `${run.chapter.emoji} ${run.chapter.title}` : "Coach's challenge"),
       " ",
       runDots(),
+      " ",
+      h("span", { class: "muted" }, label),
     ),
     h("button", { class: "btn ghost small", onclick: leave }, "Map"),
   );
@@ -136,7 +182,7 @@ function kindPills({ run, c, second, isBoss }) {
     h("span", { class: "pill" }, TYPE_LABEL[c.type]),
     h("span", { class: "pill", title: "Revised Bloom's level" }, c.bloom),
     isBoss ? h("span", { class: "pill boss-tag" }, "👹 Boss") : null,
-    second ? h("span", { class: "pill" }, "🔁 Second chance") : null,
+    second ? h("span", { class: "pill" }, "🔁 Second chance · half points") : null,
     run.phase === "single" ? h("span", { class: "pill" }, "🎯 Coach's challenge") : null,
   );
 }
@@ -191,5 +237,5 @@ function showChallenge() {
 
   RENDER[c.type](c, body, (res, reveal) => finishTurn(turn, res, reveal), turn.state);
   if (c.seconds && !OWN_CLOCK.has(c.type)) startCountdown(c.seconds, kind, body, turn.state);
-  show(runBar(run), turn.card);
+  show(runBar(run, runLabel(run)), turn.card);
 }

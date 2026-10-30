@@ -16,5 +16,12 @@ export function multi(c, body, finish) {
   });
   const why = h("input", { type: "text", placeholder: "Why, in one line? (optional, but it helps it stick)" });
   btn.onclick = () => finish({ picked, why: why.value }, () => mark(list, c.correct, picked));
-  body.append(h("div", { class: "muted" }, `Pick ${c.correct.length}.`), list, h("p"), why, h("p"), btn);
+  body.append(
+    h("div", { class: "muted" }, "Tick them, then Check. Check unlocks when you have ticked the right number."),
+    list,
+    h("p"),
+    why,
+    h("p"),
+    btn,
+  );
 }

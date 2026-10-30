@@ -3,6 +3,15 @@ import { shuffle } from "../engine.js";
 import { app, clearTimers } from "../state.js";
 import { h } from "../dom.js";
 
+// The right option, and the player's pick if it was wrong. On every question but the last it is replaced at once.
+function markAnswer(opts, reach, picked) {
+  for (const b of opts.querySelectorAll(".opt")) {
+    b.disabled = true;
+    if (b.textContent === reach) b.classList.add(picked === reach ? "right" : "missed");
+    else if (b.textContent === picked) b.classList.add("wrong");
+  }
+}
+
 export function lightning(c, body, finish, state) {
   const secs = c.seconds || 90;
   const reaches = [...new Set(c.pairs.map((p) => p[1]))];
@@ -21,8 +30,12 @@ export function lightning(c, body, finish, state) {
     const timer = h("div", { class: "timer" }, `⏱️ ${left}s`);
     const q = h("div", { class: "lightning-q" });
     const opts = h("div", { class: "options" });
-    const end = () => {
+    // The round is over: the clock stops and says how it ended, and the last question stays marked.
+    const end = (timedOut) => {
       if (state.submitted) return;
+      clearInterval(tick);
+      timer.textContent = timedOut ? "⏱️ Time's up" : `✅ Done in ${secs - left}s`;
+      timer.classList.remove("low");
       finish({ right, shown: i }, null);
       const toLearn = [...misses, ...pairs.slice(i)];
       body.append(
@@ -55,6 +68,7 @@ export function lightning(c, body, finish, state) {
                 const ok = text === reach;
                 if (ok) right++;
                 else misses.push([hear, reach]);
+                markAnswer(opts, reach, text);
                 opts.classList.add(ok ? "flash-right" : "flash-wrong");
                 setTimeout(() => opts.classList.remove("flash-right", "flash-wrong"), 350);
                 i++;
@@ -67,18 +81,17 @@ export function lightning(c, body, finish, state) {
       );
     };
     body.replaceChildren(h("div", { class: "row spread" }, timer, h("span", { class: "muted" }, "Go!")), q, opts);
-    app.timers.push(
-      setInterval(() => {
-        left--;
-        timer.textContent = `⏱️ ${left}s`;
-        timer.classList.toggle("low", left <= 10);
-        if (left <= 0) {
-          opts.replaceChildren();
-          end();
-          clearTimers();
-        }
-      }, 1000),
-    );
+    const tick = setInterval(() => {
+      left--;
+      timer.textContent = `⏱️ ${left}s`;
+      timer.classList.toggle("low", left <= 10);
+      if (left <= 0) {
+        opts.replaceChildren();
+        end(true);
+        clearTimers();
+      }
+    }, 1000);
+    app.timers.push(tick);
     ask();
   };
 }
