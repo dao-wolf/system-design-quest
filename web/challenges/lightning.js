@@ -12,6 +12,21 @@ function markAnswer(opts, reach, picked) {
   }
 }
 
+// What the round leaves to revise, or a clean sweep.
+function summary(right, pairs, toLearn) {
+  if (!toLearn.length) return h("div", { class: "answerbox" }, `Clean sweep: ${right} of ${pairs.length}.`);
+  return h(
+    "div",
+    { class: "answerbox" },
+    h("b", {}, `${right} of ${pairs.length}. To learn: `),
+    h(
+      "ul",
+      {},
+      toLearn.map(([a, b]) => h("li", {}, `${a} → ${b}`)),
+    ),
+  );
+}
+
 export function lightning(c, body, finish, state) {
   const secs = c.seconds || 90;
   const reaches = [...new Set(c.pairs.map((p) => p[1]))];
@@ -38,20 +53,7 @@ export function lightning(c, body, finish, state) {
       timer.classList.remove("low");
       finish({ right, shown: i }, null);
       const toLearn = [...misses, ...pairs.slice(i)];
-      body.append(
-        toLearn.length
-          ? h(
-              "div",
-              { class: "answerbox" },
-              h("b", {}, `${right} of ${pairs.length}. To learn: `),
-              h(
-                "ul",
-                {},
-                toLearn.map(([a, b]) => h("li", {}, `${a} → ${b}`)),
-              ),
-            )
-          : h("div", { class: "answerbox" }, `Clean sweep: ${right} of ${pairs.length}.`),
-      );
+      body.append(summary(right, pairs, toLearn));
     };
     const ask = () => {
       if (i >= pairs.length) return end();

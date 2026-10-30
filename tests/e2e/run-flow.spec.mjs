@@ -1,5 +1,5 @@
-// A run from the player's side: where they are in it, the hand-off to the second chances, how a lightning round ends,
-// which rating they chose, and what happens to a streak. Played on the fixture host (/types/).
+// A run from the player's side: where they are, the hand-off to the second chances, how a lightning round ends,
+// the rating chosen, and a streak. Played on the fixture host (/types/).
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { button, chapter, missMulti, playChapter } from "./helpers.mjs";
@@ -14,27 +14,30 @@ test.beforeEach(async ({ page }) => {
   page.on("dialog", (d) => d.accept());
 });
 
-const rating = (page, name) => button(page, name);
+const rightMulti = async (page) => {
+  for (const i of multi.correct) await button(page, multi.options[i]).click();
+  await button(page, "Check").click();
+};
 const next = (page) => button(page, "Next ▶").click();
 const missRecall = async (page) => {
   await button(page, "Show the answer").click();
-  await rating(page, "❌ Missed it").click();
+  await button(page, "❌ Missed it").click();
 };
 const gotRecall = async (page) => {
   await button(page, "Show the answer").click();
-  await rating(page, "✅ Got it").click();
+  await button(page, "✅ Got it").click();
 };
 
 test("a run says where you are: 1 of 2, 2 of 2, then the boss", async ({ page }) => {
   await playChapter(page, "full-run");
   await expect(page.locator(".runbar")).toContainText("1 of 2");
-  for (const i of multi.correct) await button(page, multi.options[i]).click();
-  await button(page, "Check").click();
+  await rightMulti(page);
   await next(page);
   await expect(page.locator(".runbar")).toContainText("2 of 2");
   await gotRecall(page);
   await next(page);
   await expect(page.locator(".handoff")).toHaveCount(0); // nothing missed: no hand-off
+  await expect(page.locator("#coach")).toBeHidden(); // and no empty coach panel under the card
   await expect(page.locator(".kind")).toContainText("👹 Boss");
   await expect(page.locator(".runbar")).toContainText("Boss");
 });
@@ -59,8 +62,7 @@ test("the first pass hands over to the second chances: how it went, what is next
   await expect(page.locator(".runbar")).toContainText("Second chance 1 of 2");
   await expect(page.locator(".kind")).toContainText("🔁 Second chance · half points");
   await expect(page.getByText(multi.prompt)).toBeVisible();
-  for (const i of multi.correct) await button(page, multi.options[i]).click();
-  await button(page, "Check").click();
+  await rightMulti(page);
   await expect(page.locator(".feedback .plus")).toHaveText("+8");
   await next(page);
   await expect(page.locator(".runbar")).toContainText("Second chance 2 of 2");
@@ -70,8 +72,7 @@ test("Save for later skips the second chances: the boss comes next and the misse
   page,
 }) => {
   await playChapter(page, "full-run");
-  for (const i of multi.correct) await button(page, multi.options[i]).click();
-  await button(page, "Check").click();
+  await rightMulti(page);
   await next(page);
   await missRecall(page);
   await next(page);
@@ -94,8 +95,7 @@ test("Save for later skips the second chances: the boss comes next and the misse
 
 test("a miss that ends a streak says so gently, with the best of the run", async ({ page }) => {
   await playChapter(page, "full-run");
-  for (const i of multi.correct) await button(page, multi.options[i]).click();
-  await button(page, "Check").click();
+  await rightMulti(page);
   await next(page);
   await gotRecall(page);
   await next(page);
@@ -111,18 +111,16 @@ test("a miss that ends a streak says so gently, with the best of the run", async
 test("the rating you chose stays marked, and the others are marked as not chosen", async ({ page }) => {
   await playChapter(page, "drill-recall");
   await button(page, "Show the answer").click();
-  await expect(rating(page, "⚡ Easy")).not.toHaveAttribute("aria-pressed", /.*/); // a choice, not a toggle, until made
-  await rating(page, "⚡ Easy").click();
-  // Chosen, it carries a tick, so its name is now "✓ ⚡ Easy".
-  const chosen = page.getByRole("button", { name: /✓ ⚡ Easy/ });
+  await expect(button(page, "⚡ Easy")).not.toHaveAttribute("aria-pressed", /.*/); // a choice, not a toggle, until made
+  await button(page, "⚡ Easy").click();
+  const chosen = page.getByRole("button", { name: /✓ ⚡ Easy/ }); // the tick is in its name
   await expect(chosen).toHaveAttribute("aria-pressed", "true");
   for (const other of ["❌ Missed it", "🟡 Partly", "✅ Got it"]) {
-    await expect(rating(page, other)).toHaveAttribute("aria-pressed", "false");
+    await expect(button(page, other)).toHaveAttribute("aria-pressed", "false");
   }
-  // Every rating is switched off once chosen, but only the chosen one stays at full strength.
   const opacity = (locator) => locator.evaluate((el) => globalThis.getComputedStyle(el).opacity);
   expect(await opacity(chosen)).toBe("1");
-  expect(Number(await opacity(rating(page, "✅ Got it")))).toBeLessThan(1);
+  expect(Number(await opacity(button(page, "✅ Got it")))).toBeLessThan(1);
 });
 
 test("a lightning round that ends on the last question shows the time it took and marks the right answer", async ({
@@ -169,11 +167,6 @@ test("a pick-all-that-apply question does not give the number to pick, and says 
   await expect(
     page.getByText("Tick them, then Check. Check unlocks when you have ticked the right number."),
   ).toBeVisible();
-});
-
-test("the empty rounded bar under the card is gone when no coach is running", async ({ page }) => {
-  await playChapter(page, "drill-recall");
-  await expect(page.locator("#coach")).toBeHidden();
 });
 
 // The hand-off, the run bar's labels and the marked rating, on a phone: nothing overflows and axe finds nothing serious.
