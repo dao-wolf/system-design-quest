@@ -11,6 +11,8 @@ import {
   cleanProfile,
   holdActive,
   recommend,
+  bloomHelp,
+  BLOOM_POINTS,
   BOSS_PASS,
 } from "../web/engine.js";
 
@@ -360,4 +362,16 @@ test("a locked chapter counts how many more bosses open it", () => {
   assert.deepEqual(need([ans("b1", "2026-10-30", true), ans("b2", "2026-10-30", true)]), [0, 0, 0, 0, 1]);
   // Jumping in anyway opens that chapter only, and it stops waiting.
   assert.deepEqual(need([{ kind: "unlock", slug: "c4", chosen: true }]), [0, 0, 1, 0, 3]);
+
+test("every level of the ladder explains itself, in order, and the tooltip names the whole ladder", () => {
+  const LADDER = ["remember", "understand", "apply", "analyse", "evaluate", "create"];
+  assert.deepEqual(Object.keys(BLOOM_POINTS), LADDER);
+  assert.equal(
+    bloomHelp("remember"),
+    "Remember: recall the fact. Levels go remember, understand, apply, analyse, evaluate, create.",
+  );
+  for (const level of LADDER)
+    assert.match(bloomHelp(level), new RegExp(`^${level[0].toUpperCase()}${level.slice(1)}: .+\\.`));
+  // A level the game does not know still explains the ladder, rather than printing "undefined".
+  assert.equal(bloomHelp("nonsense"), "Levels go remember, understand, apply, analyse, evaluate, create.");
 });
