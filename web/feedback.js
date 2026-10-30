@@ -62,18 +62,62 @@ function askCoach(c, res, where) {
   ta.focus();
 }
 
-function flag(c, where) {
-  const ta = h("input", { type: "text", placeholder: "What's wrong with it?" });
-  where.after(
-    noteBox({
-      field: ta,
-      wrapAttrs: { class: "row", style: "width:100%" },
-      label: "Flag it",
-      send: (text) => post(baseEvent("flag", { coach: app.coach, challenge: c.id, note: text.slice(0, 500) })),
-      sent: "🚩 Flagged. It'll be reviewed.",
-    }),
-  );
-  ta.focus();
+// A flag is only saved on this device. The way to send it on is a GitHub issue the player chooses to open, with their
+// words already in it: nothing is sent until they submit it there.
+const ISSUE_URL = "https://github.com/dao-wolf/system-design-quest/issues/new";
+function issueUrl(c, note) {
+  const fields = {
+    template: "wrong-answer.yml",
+    title: `Wrong answer? ${c.id}`,
+    challenge: `${c.id}: ${c.prompt.slice(0, 150)}`,
+    why: note,
+  };
+  return `${ISSUE_URL}?${Object.entries(fields)
+    .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
+    .join("&")}`;
+}
+
+// The Flag button and the place its form opens: one form at a time, opened and closed by the button. "Flag it" waits
+// for some words, and once sent the form folds into one line that says where the flag went.
+function flagControl(c) {
+  const slot = h("div");
+  const field = h("input", {
+    type: "text",
+    placeholder: "What's wrong with it?",
+    "aria-label": "What's wrong with it?",
+  });
+  const send = h("button", { class: "btn small", disabled: true, onclick: () => submit() }, "Flag it");
+  const form = h("div", { class: "row", style: "width:100%" }, field, send);
+  field.addEventListener("input", () => {
+    send.disabled = !field.value.trim();
+  });
+  const button = h("button", { class: "btn ghost", "aria-expanded": "false", onclick: () => toggle() }, "🚩 Flag");
+
+  function toggle() {
+    const open = !form.isConnected;
+    if (open) slot.replaceChildren(form);
+    else form.remove();
+    button.setAttribute("aria-expanded", String(open));
+    if (open) field.focus();
+  }
+  async function submit() {
+    send.disabled = true;
+    const note = field.value.trim().slice(0, 500);
+    await post(baseEvent("flag", { coach: app.coach, challenge: c.id, note }));
+    slot.replaceChildren(
+      h(
+        "div",
+        { class: "muted" },
+        "🚩 Saved on this device. To send it to me, ",
+        h("a", { href: issueUrl(c, note), target: "_blank", rel: "noopener" }, "report it on GitHub"),
+        ".",
+      ),
+    );
+    button.setAttribute("aria-expanded", "false");
+    button.textContent = "🚩 Flagged";
+    button.disabled = true;
+  }
+  return { button, slot };
 }
 
 function feedbackActions(c, res) {
@@ -82,9 +126,10 @@ function feedbackActions(c, res) {
   actions.append(nextBtn);
   if (app.coach)
     actions.append(h("button", { class: "btn ghost", onclick: () => askCoach(c, res, actions) }, "💬 Ask coach"));
-  actions.append(h("button", { class: "btn ghost", onclick: () => flag(c, actions) }, "🚩 Flag"));
+  const flag = flagControl(c);
+  actions.append(flag.button);
   setTimeout(() => nextBtn.focus(), 50);
-  return actions;
+  return [actions, flag.slot];
 }
 
 export function feedback({ c, isBoss }, res, fraction, s) {
