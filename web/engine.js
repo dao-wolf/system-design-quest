@@ -294,22 +294,34 @@ function rankOf(played, stars, bossBeaten) {
   return RANKS[bossBeaten ? 1 : 0];
 }
 
+// Everything before the boss has had a first try, and the boss is there to play (a chapter that is only its boss, or
+// whose boss is not among its challenges, has nothing to get ready for).
+function readyForBoss(ch, tried) {
+  const rest = ch.challenges.filter((c) => c.id !== ch.boss);
+  return rest.length > 0 && rest.length < ch.challenges.length && rest.every((c) => tried.has(c.id));
+}
+
 function chapterProgress(ch, answers) {
   const ids = new Set(ch.challenges.map((c) => c.id));
   const mine = answers.filter((e) => ids.has(e.challenge));
   const first = mine.filter((e) => !e.second_chance);
   const bossBeaten = answers.some((e) => beatsBoss(e, ch));
   const stars = bossBeaten ? 1 + Math.min(2, replayDays(first, Math.min(6, ids.size))) : 0;
+  const tried = new Set(first.map((e) => e.challenge));
   return {
     played: mine.length > 0,
-    answered: new Set(first.map((e) => e.challenge)).size,
+    answered: tried.size,
     total: ids.size,
     bossBeaten,
+    bossReady: !bossBeaten && readyForBoss(ch, tried),
     stars,
     rank: rankOf(mine.length > 0, stars, bossBeaten),
     accuracy: first.length ? first.filter((e) => e.correct).length / first.length : null,
   };
 }
+
+// How many more bosses open a locked chapter. Any boss counts, not one in particular.
+const bossesToOpen = (unlocked, inOrder, bossesBeaten) => (unlocked ? 0 : inOrder - OPEN_AT_START - bossesBeaten + 1);
 
 // Quests (and any chapter marked open) are always playable; training chapters unlock in order, one per boss beaten.
 // Unlocks never go backwards: once the record says a chapter opened, it stays open, whatever the bundle holds now.
@@ -319,6 +331,7 @@ function unlock(out, chapters, opened, bossesBeaten) {
     const open = ch.open === true || isQuest(ch);
     const unlocked = open || inOrder < OPEN_AT_START + bossesBeaten || opened.has(ch.slug);
     out.chapters[ch.slug].unlocked = unlocked;
+    out.chapters[ch.slug].bossesToOpen = bossesToOpen(unlocked, inOrder, bossesBeaten);
     if (unlocked && !opened.has(ch.slug)) out.newUnlocks.push(ch.slug);
     if (!open) inOrder++;
   }

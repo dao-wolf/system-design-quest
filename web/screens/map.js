@@ -9,6 +9,7 @@ import { renderProfile } from "./profile.js";
 
 const PROFILE_FIELDS = ["name", "company", "role", "interview_type", "interview_date"];
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+const list = (items) => new Intl.ListFormat("en-GB").format(items);
 
 // "Chapter 3" for training, "Quest 2" for quests (numbered in their own order).
 function label(ch) {
@@ -24,6 +25,17 @@ function badgeList(badges) {
     { class: "badges" },
     badges.map((b) => h("span", { class: "pill", title: b.label }, `${badgeEmoji(b.id)} ${b.label}`)),
   );
+}
+
+// What is left once a chapter's other challenges have been played: its boss. Empty until there is one.
+function bossesLeft(p) {
+  const ready = app.bundle.chapters.filter((ch) => p.chapters[ch.slug].bossReady).sort((a, b) => a.chapter - b.chapter);
+  if (!ready.length) return "";
+  const names =
+    ready.length > 3
+      ? `${ready.length} ${ready.some(isQuest) ? "chapters and quests" : "chapters"}`
+      : list(ready.map(label));
+  return `${names} played, ${ready.length === 1 ? "boss" : "bosses"} still to beat. `;
 }
 
 // The player's name and interview, how many bosses are beaten, and the badges.
@@ -44,7 +56,7 @@ function hero(p) {
         h(
           "div",
           { class: "muted" },
-          `${beaten} of ${totalBosses} bosses beaten. Points come from right answers only; a miss costs nothing and comes back later.`,
+          `${beaten} of ${totalBosses} bosses beaten. ${bossesLeft(p)}Points come from right answers only; a miss costs nothing and comes back later.`,
         ),
       ),
       badgeList(p.badges),
@@ -97,6 +109,12 @@ function heldHint() {
   ];
 }
 
+// Once a chapter's other challenges are played, what is left is its boss, not another run.
+function nextUpButton(up, c) {
+  if (c.bossReady) return h("button", { class: "btn", onclick: () => startBoss(up.slug) }, `Try the ${label(up)} boss`);
+  return h("button", { class: "btn", onclick: () => startChapter(up.slug) }, c.played ? "Replay" : "Play");
+}
+
 function nextUpCard(up, p) {
   if (!up) return [];
   return [
@@ -110,11 +128,7 @@ function nextUpCard(up, p) {
         h("h2", {}, `${up.emoji} ${label(up)}: ${up.title}`),
         h("div", { class: "muted" }, up.blurb),
       ),
-      h(
-        "button",
-        { class: "btn", onclick: () => startChapter(up.slug) },
-        p.chapters[up.slug].played ? "Replay" : "Play",
-      ),
+      nextUpButton(up, p.chapters[up.slug]),
     ),
   ];
 }
@@ -157,11 +171,13 @@ function playButtons(ch, c) {
   );
 }
 
-function lockedRow(ch) {
+// Any boss opens it: "such as" names the one the player would reach for next.
+function lockedRow(ch, c, nextBoss) {
+  const more = c.bossesToOpen === 1 ? "one more boss" : `${c.bossesToOpen} more bosses`;
   return h(
     "div",
     { class: "row spread" },
-    h("span", { class: "muted" }, "Opens when you beat another boss"),
+    h("span", { class: "muted" }, `Opens when you beat ${more}${nextBoss ? `, such as the ${nextBoss} boss` : ""}`),
     h(
       "button",
       {
@@ -174,7 +190,7 @@ function lockedRow(ch) {
   );
 }
 
-function chapterCard(ch, c, byNumber) {
+function chapterCard(ch, c, byNumber, nextBoss) {
   const stars = "★".repeat(c.stars) + "☆".repeat(3 - c.stars);
   return h(
     "div",
@@ -195,7 +211,7 @@ function chapterCard(ch, c, byNumber) {
       h("span", { class: "muted" }, c.accuracy != null ? `${Math.round(c.accuracy * 100)}% first try` : ""),
     ),
     h("div", { class: "bar" }, h("i", { style: `width:${(100 * c.answered) / Math.max(1, c.total)}%` })),
-    c.unlocked ? playButtons(ch, c) : lockedRow(ch),
+    c.unlocked ? playButtons(ch, c) : lockedRow(ch, c, nextBoss),
   );
 }
 
@@ -205,8 +221,9 @@ const sectionHead = (title, note) => h("h2", { class: "section" }, title, h("spa
 function sections(p) {
   const all = [...app.bundle.chapters].sort((a, b) => a.chapter - b.chapter);
   const byNumber = Object.fromEntries(all.map((ch) => [ch.chapter, ch]));
-  const card = (ch) => chapterCard(ch, p.chapters[ch.slug], byNumber);
   const training = all.filter((ch) => !isQuest(ch));
+  const open = training.find((ch) => p.chapters[ch.slug].unlocked && !p.chapters[ch.slug].bossBeaten);
+  const card = (ch) => chapterCard(ch, p.chapters[ch.slug], byNumber, open && label(open));
   const quests = all.filter(isQuest);
   const beatenOf = (list) => list.filter((ch) => p.chapters[ch.slug].bossBeaten).length;
   const out = [
