@@ -65,16 +65,39 @@ function askCoach(c, res, where) {
 // A flag is only saved on this device. The way to send it on is a GitHub issue the player chooses to open, with their
 // words already in it: nothing is sent until they submit it there.
 const ISSUE_URL = "https://github.com/dao-wolf/system-design-quest/issues/new";
+// Cut to a length in whole characters: a cut through an emoji would leave half of it, which can't go in a link.
+const clip = (text, max) => Array.from(text).slice(0, max).join("");
 function issueUrl(c, note) {
   const fields = {
     template: "wrong-answer.yml",
     title: `Wrong answer? ${c.id}`,
-    challenge: `${c.id}: ${c.prompt.slice(0, 150)}`,
+    challenge: `${c.id}: ${clip(c.prompt, 150)}`,
     why: note,
   };
   return `${ISSUE_URL}?${Object.entries(fields)
     .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
     .join("&")}`;
+}
+
+// What replaces the form once the flag is saved: where it went, and the way to send it on.
+function savedLine(link) {
+  return h(
+    "div",
+    { class: "muted", tabindex: "-1" },
+    "🚩 Saved on this device. To send it to me, ",
+    h(
+      "a",
+      {
+        href: link,
+        target: "_blank",
+        rel: "noopener noreferrer",
+        title:
+          "Opens a GitHub issue with your note filled in. It is public, and nothing is sent until you submit it there.",
+      },
+      "report it on GitHub",
+    ),
+    ".",
+  );
 }
 
 // The Flag button and the place its form opens: one form at a time, opened and closed by the button. "Flag it" waits
@@ -88,10 +111,18 @@ function flagControl(c) {
   });
   const send = h("button", { class: "btn small", disabled: true, onclick: () => submit() }, "Flag it");
   const form = h("div", { class: "row", style: "width:100%" }, field, send);
+  const button = h("button", { class: "btn ghost", "aria-expanded": "false", onclick: () => toggle() }, "🚩 Flag");
   field.addEventListener("input", () => {
     send.disabled = !field.value.trim();
   });
-  const button = h("button", { class: "btn ghost", "aria-expanded": "false", onclick: () => toggle() }, "🚩 Flag");
+  field.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") submit();
+  });
+  // While a flag is being saved nothing can change it, add a second one or close the form.
+  const lock = (on) => {
+    field.disabled = button.disabled = on;
+    send.disabled = on || !field.value.trim();
+  };
 
   function toggle() {
     const open = !form.isConnected;
@@ -101,21 +132,20 @@ function flagControl(c) {
     if (open) field.focus();
   }
   async function submit() {
-    send.disabled = true;
-    const note = field.value.trim().slice(0, 500);
-    await post(baseEvent("flag", { coach: app.coach, challenge: c.id, note }));
-    slot.replaceChildren(
-      h(
-        "div",
-        { class: "muted" },
-        "🚩 Saved on this device. To send it to me, ",
-        h("a", { href: issueUrl(c, note), target: "_blank", rel: "noopener" }, "report it on GitHub"),
-        ".",
-      ),
-    );
+    if (send.disabled) return;
+    lock(true);
+    const note = clip(field.value.trim(), 500);
+    const link = issueUrl(c, note);
+    try {
+      await post(baseEvent("flag", { coach: app.coach, challenge: c.id, note }));
+    } catch {
+      return lock(false); // not saved: the form stays, to try again
+    }
+    const saved = savedLine(link);
+    slot.replaceChildren(saved);
+    saved.focus();
     button.setAttribute("aria-expanded", "false");
     button.textContent = "🚩 Flagged";
-    button.disabled = true;
   }
   return { button, slot };
 }
