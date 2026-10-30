@@ -3,9 +3,18 @@
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { readFileSync } from "node:fs";
-import { button, chapter, fixture, playChapter } from "./helpers.mjs";
 
 const bundle = JSON.parse(readFileSync("dist/chapters.json", "utf8"));
+const fixture = JSON.parse(readFileSync("tests/e2e/fixtures/chapters.json", "utf8"));
+const chapter = (slug) => fixture.chapters.find((c) => c.slug === slug);
+const button = (page, name) => page.getByRole("button", { name, exact: true });
+async function playChapter(page, slug) {
+  await page.goto("/types/");
+  await page
+    .locator(".chapter", { has: page.getByRole("heading", { name: chapter(slug).title, exact: true }) })
+    .getByRole("button", { name: "Play" })
+    .click();
+}
 const lockedCard = (page, number) =>
   page.locator(".chapter.locked", {
     has: page.getByRole("heading", { name: bundle.chapters.find((c) => c.chapter === number).title, exact: true }),

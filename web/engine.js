@@ -300,11 +300,15 @@ function chapterProgress(ch, answers) {
   const first = mine.filter((e) => !e.second_chance);
   const bossBeaten = answers.some((e) => beatsBoss(e, ch));
   const stars = bossBeaten ? 1 + Math.min(2, replayDays(first, Math.min(6, ids.size))) : 0;
+  const tried = new Set(first.map((e) => e.challenge));
+  const rest = ch.challenges.filter((c) => c.id !== ch.boss);
   return {
     played: mine.length > 0,
-    answered: new Set(first.map((e) => e.challenge)).size,
+    answered: tried.size,
     total: ids.size,
     bossBeaten,
+    // Everything before the boss has had a first try, and the boss is still there to beat.
+    bossReady: !bossBeaten && rest.length > 0 && rest.every((c) => tried.has(c.id)),
     stars,
     rank: rankOf(mine.length > 0, stars, bossBeaten),
     accuracy: first.length ? first.filter((e) => e.correct).length / first.length : null,
@@ -319,6 +323,8 @@ function unlock(out, chapters, opened, bossesBeaten) {
     const open = ch.open === true || isQuest(ch);
     const unlocked = open || inOrder < OPEN_AT_START + bossesBeaten || opened.has(ch.slug);
     out.chapters[ch.slug].unlocked = unlocked;
+    // Any boss counts, not one in particular: this many more beaten and the chapter opens.
+    out.chapters[ch.slug].bossesToOpen = unlocked ? 0 : inOrder - OPEN_AT_START - bossesBeaten + 1;
     if (unlocked && !opened.has(ch.slug)) out.newUnlocks.push(ch.slug);
     if (!open) inOrder++;
   }
