@@ -162,7 +162,7 @@ function feedbackActions(c, res) {
   return [actions, flag.slot];
 }
 
-export function feedback({ c, isBoss }, res, fraction, s) {
+export function feedback({ c, isBoss, comesBack, streakLost }, res, fraction, s) {
   const [verdict, cls] = verdictOf(s, fraction, isBoss);
   const reveal = REVEAL_TEXT[c.type];
   return h(
@@ -175,9 +175,8 @@ export function feedback({ c, isBoss }, res, fraction, s) {
       verdict,
       s.multiplier > 1 && s.correct ? h("span", { class: "combo" }, `  🔥 ×${s.multiplier}`) : "",
     ),
-    !s.correct && fraction < 1
-      ? h("div", { class: "muted" }, "It comes back at the end of the run for a second chance.")
-      : null,
+    comesBack ? h("div", { class: "muted" }, "It gets a second chance after this pass, for half points.") : null,
+    streakLost ? h("div", { class: "muted" }, `Streak reset, best this run: ${streakLost}.`) : null,
     reveal ? reveal(c, res) : null,
     h("div", { style: "margin-top:8px" }, richText(c.explain)),
     sourceLine(c.source),

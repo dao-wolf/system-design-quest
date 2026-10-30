@@ -434,6 +434,65 @@
           "source": "https://kafka.apache.org/"
         }
       ]
+    },
+    {
+      "chapter": 13,
+      "slug": "long-pass",
+      "title": "A long first pass",
+      "emoji": "📏",
+      "open": true,
+      "boss": "long-boss",
+      "challenges": [
+        {
+          "id": "long-1",
+          "type": "recall",
+          "prompt": "Long pass, question 1: what does a cache give up for speed?",
+          "answer": "Freshness.",
+          "explain": "A cached copy can be out of date."
+        },
+        {
+          "id": "long-2",
+          "type": "recall",
+          "prompt": "Long pass, question 2: what does a cache give up for speed?",
+          "answer": "Freshness.",
+          "explain": "A cached copy can be out of date."
+        },
+        {
+          "id": "long-3",
+          "type": "recall",
+          "prompt": "Long pass, question 3: what does a cache give up for speed?",
+          "answer": "Freshness.",
+          "explain": "A cached copy can be out of date."
+        },
+        {
+          "id": "long-4",
+          "type": "recall",
+          "prompt": "Long pass, question 4: what does a cache give up for speed?",
+          "answer": "Freshness.",
+          "explain": "A cached copy can be out of date."
+        },
+        {
+          "id": "long-5",
+          "type": "recall",
+          "prompt": "Long pass, question 5: what does a cache give up for speed?",
+          "answer": "Freshness.",
+          "explain": "A cached copy can be out of date."
+        },
+        {
+          "id": "long-6",
+          "type": "recall",
+          "prompt": "Long pass, question 6: what does a cache give up for speed?",
+          "answer": "Freshness.",
+          "explain": "A cached copy can be out of date."
+        },
+        {
+          "id": "long-boss",
+          "type": "recall",
+          "prompt": "Name one way to keep a cache fresh.",
+          "answer": "A time to live.",
+          "explain": "A time to live bounds how stale an entry can get."
+        }
+      ]
     }
   ]
 }

@@ -25,7 +25,10 @@ export function recall(c, body, finish) {
             {
               class: "btn ghost",
               onclick: (e) => {
-                grade.querySelectorAll("button").forEach((b) => (b.disabled = true));
+                grade.querySelectorAll("button").forEach((b) => {
+                  b.disabled = true;
+                  b.setAttribute("aria-pressed", String(b === e.target));
+                });
                 e.target.classList.add("sel");
                 finish({ grade: g, text: ta.value });
               },

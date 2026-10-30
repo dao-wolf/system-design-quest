@@ -427,6 +427,15 @@ h3 {
   border-radius: 999px;
   padding: 4px 12px;
 }
+.btn.ghost.sel::before {
+  content: "✓ ";
+}
+.btn.ghost.sel {
+  opacity: 1;
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+}
 .conf button.sel {
   background: var(--accent);
   color: var(--accent-ink);
@@ -757,6 +766,9 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+.coach[hidden] {
+  display: none;
 }
 .coach .msgs {
   overflow-y: auto;

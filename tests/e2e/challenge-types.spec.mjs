@@ -144,7 +144,7 @@ test("a run brings a miss back for a second chance, then the boss, then the resu
   for (const i of wrong) await button(page, multi.options[i]).click();
   await button(page, "Check").click();
   await expect(page.locator(".feedback .verdict")).toContainText("❌ Not this time");
-  await expect(page.getByText("It comes back at the end of the run for a second chance.")).toBeVisible();
+  await expect(page.getByText("It gets a second chance after this pass, for half points.")).toBeVisible();
   await button(page, "🚩 Flag").click();
   await page.getByPlaceholder("What's wrong with it?").fill("The wording is unclear");
   await button(page, "Flag it").click();
@@ -156,7 +156,8 @@ test("a run brings a miss back for a second chance, then the boss, then the resu
   await expect(page.locator(".feedback .verdict")).toContainText("✅ Right");
   await button(page, "Next ▶").click();
 
-  await expect(page.getByText("🔁 Second chance: the ones you missed, for half points")).toBeVisible();
+  await expect(page.locator(".handoff")).toContainText("First pass done: 1 of 2 right.");
+  await button(page, "Start now").click();
   await expect(page.locator(".kind")).toContainText("🔁 Second chance");
   await ANSWER.multi(page, multi);
   await expect(page.locator(".feedback .plus")).toHaveText("+8");
