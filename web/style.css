@@ -273,18 +273,26 @@ h3 {
   background: var(--soft);
   color: var(--muted);
 }
-/* The question's tags: bigger, in the ink colour, outlined, so they read against the card. The Bloom tag has a
-   tooltip, and a dotted underline says so. */
+/* The question's tags: bigger, in the ink colour, outlined, so they read against the card. The Bloom tag explains
+   itself (hover, tap or keyboard), and a dotted underline says so. */
 .challenge .kind .pill:not(.boss-tag) {
   font-size: 13px;
   padding: 3px 11px;
   color: var(--ink);
-  border: 1px solid var(--line);
+  border: 1px solid var(--slot);
+}
+button.pill {
+  font-family: inherit;
 }
 .pill.bloom {
   text-decoration: underline dotted;
   text-underline-offset: 3px;
   cursor: help;
+}
+.kind .bloom-note {
+  order: 10;
+  flex-basis: 100%;
+  font-size: 14px;
 }
 .icon {
   margin-right: 0.55em;

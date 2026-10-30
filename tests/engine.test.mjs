@@ -362,16 +362,21 @@ test("a locked chapter counts how many more bosses open it", () => {
   assert.deepEqual(need([ans("b1", "2026-10-30", true), ans("b2", "2026-10-30", true)]), [0, 0, 0, 0, 1]);
   // Jumping in anyway opens that chapter only, and it stops waiting.
   assert.deepEqual(need([{ kind: "unlock", slug: "c4", chosen: true }]), [0, 0, 1, 0, 3]);
+});
 
-test("every level of the ladder explains itself, in order, and the tooltip names the whole ladder", () => {
-  const LADDER = ["remember", "understand", "apply", "analyse", "evaluate", "create"];
-  assert.deepEqual(Object.keys(BLOOM_POINTS), LADDER);
-  assert.equal(
-    bloomHelp("remember"),
-    "Remember: recall the fact. Levels go remember, understand, apply, analyse, evaluate, create.",
-  );
-  for (const level of LADDER)
-    assert.match(bloomHelp(level), new RegExp(`^${level[0].toUpperCase()}${level.slice(1)}: .+\\.`));
+test("every level of the ladder explains itself, word for word, and the tooltip names the whole ladder", () => {
+  const ladder = "Levels go remember, understand, apply, analyse, evaluate, create.";
+  assert.deepEqual(Object.keys(BLOOM_POINTS), ["remember", "understand", "apply", "analyse", "evaluate", "create"]);
+  const says = {
+    remember: "Remember: recall the fact.",
+    understand: "Understand: explain it in your own words.",
+    apply: "Apply: use it on a case you have not seen.",
+    analyse: "Analyse: take a design apart and compare the parts.",
+    evaluate: "Evaluate: weigh the options and defend a choice.",
+    create: "Create: design something new.",
+  };
+  for (const [level, text] of Object.entries(says)) assert.equal(bloomHelp(level), `${text} ${ladder}`);
   // A level the game does not know still explains the ladder, rather than printing "undefined".
-  assert.equal(bloomHelp("nonsense"), "Levels go remember, understand, apply, analyse, evaluate, create.");
+  assert.equal(bloomHelp("nonsense"), ladder);
+  assert.equal(bloomHelp("constructor"), ladder);
 });

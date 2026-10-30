@@ -9,7 +9,7 @@ import { renderProfile } from "./profile.js";
 
 const PROFILE_FIELDS = ["name", "company", "role", "interview_type", "interview_date"];
 // An icon with room before the words that follow it.
-const icon = (emoji) => h("span", { class: "icon" }, emoji);
+const icon = (emoji) => h("span", { class: "icon", "aria-hidden": "true" }, emoji);
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 const list = (items) => new Intl.ListFormat("en-GB").format(items);
 
