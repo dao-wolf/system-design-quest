@@ -62,18 +62,92 @@ function askCoach(c, res, where) {
   ta.focus();
 }
 
-function flag(c, where) {
-  const ta = h("input", { type: "text", placeholder: "What's wrong with it?" });
-  where.after(
-    noteBox({
-      field: ta,
-      wrapAttrs: { class: "row", style: "width:100%" },
-      label: "Flag it",
-      send: (text) => post(baseEvent("flag", { coach: app.coach, challenge: c.id, note: text.slice(0, 500) })),
-      sent: "🚩 Flagged. It'll be reviewed.",
-    }),
+// A flag is only saved on this device. The way to send it on is a GitHub issue the player chooses to open, with their
+// words already in it: nothing is sent until they submit it there.
+const ISSUE_URL = "https://github.com/dao-wolf/system-design-quest/issues/new";
+// Cut to a length in whole characters: a cut through an emoji would leave half of it, which can't go in a link.
+const clip = (text, max) => Array.from(text).slice(0, max).join("");
+function issueUrl(c, note) {
+  const fields = {
+    template: "wrong-answer.yml",
+    title: `Wrong answer? ${c.id}`,
+    challenge: `${c.id}: ${clip(c.prompt, 150)}`,
+    why: note,
+  };
+  return `${ISSUE_URL}?${Object.entries(fields)
+    .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
+    .join("&")}`;
+}
+
+// What replaces the form once the flag is saved: where it went, and the way to send it on.
+function savedLine(link) {
+  return h(
+    "div",
+    { class: "muted", tabindex: "-1" },
+    "🚩 Saved on this device. To send it to me, ",
+    h(
+      "a",
+      {
+        href: link,
+        target: "_blank",
+        rel: "noopener noreferrer",
+        title:
+          "Opens a GitHub issue with your note filled in. It is public, and nothing is sent until you submit it there.",
+      },
+      "report it on GitHub",
+    ),
+    ".",
   );
-  ta.focus();
+}
+
+// The Flag button and the place its form opens: one form at a time, opened and closed by the button. "Flag it" waits
+// for some words, and once sent the form folds into one line that says where the flag went.
+function flagControl(c) {
+  const slot = h("div");
+  const field = h("input", {
+    type: "text",
+    placeholder: "What's wrong with it?",
+    "aria-label": "What's wrong with it?",
+  });
+  const send = h("button", { class: "btn small", disabled: true, onclick: () => submit() }, "Flag it");
+  const form = h("div", { class: "row", style: "width:100%" }, field, send);
+  const button = h("button", { class: "btn ghost", "aria-expanded": "false", onclick: () => toggle() }, "🚩 Flag");
+  field.addEventListener("input", () => {
+    send.disabled = !field.value.trim();
+  });
+  field.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") submit();
+  });
+  // While a flag is being saved nothing can change it, add a second one or close the form.
+  const lock = (on) => {
+    field.disabled = button.disabled = on;
+    send.disabled = on || !field.value.trim();
+  };
+
+  function toggle() {
+    const open = !form.isConnected;
+    if (open) slot.replaceChildren(form);
+    else form.remove();
+    button.setAttribute("aria-expanded", String(open));
+    if (open) field.focus();
+  }
+  async function submit() {
+    if (send.disabled) return;
+    lock(true);
+    const note = clip(field.value.trim(), 500);
+    const link = issueUrl(c, note);
+    try {
+      await post(baseEvent("flag", { coach: app.coach, challenge: c.id, note }));
+    } catch {
+      return lock(false); // not saved: the form stays, to try again
+    }
+    const saved = savedLine(link);
+    slot.replaceChildren(saved);
+    saved.focus();
+    button.setAttribute("aria-expanded", "false");
+    button.textContent = "🚩 Flagged";
+  }
+  return { button, slot };
 }
 
 function feedbackActions(c, res) {
@@ -82,9 +156,10 @@ function feedbackActions(c, res) {
   actions.append(nextBtn);
   if (app.coach)
     actions.append(h("button", { class: "btn ghost", onclick: () => askCoach(c, res, actions) }, "💬 Ask coach"));
-  actions.append(h("button", { class: "btn ghost", onclick: () => flag(c, actions) }, "🚩 Flag"));
+  const flag = flagControl(c);
+  actions.append(flag.button);
   setTimeout(() => nextBtn.focus(), 50);
-  return actions;
+  return [actions, flag.slot];
 }
 
 export function feedback({ c, isBoss }, res, fraction, s) {

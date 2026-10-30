@@ -148,7 +148,7 @@ test("a run brings a miss back for a second chance, then the boss, then the resu
   await button(page, "🚩 Flag").click();
   await page.getByPlaceholder("What's wrong with it?").fill("The wording is unclear");
   await button(page, "Flag it").click();
-  await expect(page.getByText("🚩 Flagged. It'll be reviewed.")).toBeVisible();
+  await expect(page.getByText("Saved on this device. To send it to me,")).toBeVisible();
   await button(page, "Next ▶").click();
 
   await expect(page.getByText(recall.prompt)).toBeVisible();
