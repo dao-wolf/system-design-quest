@@ -169,9 +169,7 @@ function runBar(run, label) {
       "div",
       {},
       h("b", {}, run.chapter ? `${run.chapter.emoji} ${run.chapter.title}` : "Coach's challenge"),
-      " ",
-      runDots(),
-      label ? [" ", h("span", { class: "muted" }, label)] : null,
+      h("div", { class: "row" }, runDots(), label ? h("span", { class: "muted" }, label) : null),
     ),
     h("button", { class: "btn ghost small", onclick: leave }, "Map"),
   );
