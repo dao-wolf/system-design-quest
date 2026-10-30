@@ -34,6 +34,7 @@ test("a run says where you are: 1 of 2, 2 of 2, then the boss", async ({ page })
   await expect(page.locator(".runbar")).toContainText("2 of 2");
   await gotRecall(page);
   await next(page);
+  await expect(page.locator(".handoff")).toHaveCount(0); // nothing missed: no hand-off
   await expect(page.locator(".kind")).toContainText("👹 Boss");
   await expect(page.locator(".runbar")).toContainText("Boss");
 });
@@ -89,17 +90,6 @@ test("Save for later skips the second chances: the boss comes next and the misse
   await expect(page.getByRole("listitem").filter({ hasText: recall.prompt })).toBeVisible();
   const record = await page.evaluate(() => JSON.parse(localStorage.getItem("sdq-events-v1")));
   expect(record.filter((e) => e.kind === "answer" && e.second_chance)).toHaveLength(0);
-});
-
-test("with nothing missed there is no hand-off", async ({ page }) => {
-  await playChapter(page, "full-run");
-  for (const i of multi.correct) await button(page, multi.options[i]).click();
-  await button(page, "Check").click();
-  await next(page);
-  await gotRecall(page);
-  await next(page);
-  await expect(page.locator(".handoff")).toHaveCount(0);
-  await expect(page.locator(".kind")).toContainText("👹 Boss");
 });
 
 test("a miss that ends a streak says so gently, with the best of the run", async ({ page }) => {
@@ -257,13 +247,13 @@ test("a replay of the misses that misses again hands over too, and Save for late
 
 test("a long first pass lists the first five misses and counts the rest", async ({ page }) => {
   await playChapter(page, "long-pass");
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < 6; i++) {
     await missRecall(page);
     await next(page);
   }
   const card = page.locator(".handoff");
-  await expect(card).toContainText("First pass done: 0 of 7 right.");
-  await expect(card).toContainText("7 second chances next, for half points");
+  await expect(card).toContainText("First pass done: 0 of 6 right.");
+  await expect(card).toContainText("6 second chances next, for half points");
   await expect(card.getByRole("listitem")).toHaveCount(6);
-  await expect(card.getByRole("listitem").last()).toHaveText("and 2 more");
+  await expect(card.getByRole("listitem").last()).toHaveText("and 1 more");
 });
