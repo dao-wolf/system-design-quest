@@ -57,6 +57,7 @@ for (const [place, chapter] of PLACES) {
   test(`a missed coach's challenge with ${place} shows the results and replays on its own`, async ({ page }) => {
     await localCoachServer(page, { ts: "2026-10-28T12:00:00Z", chapter, why: "A fresh scenario", challenge });
     await page.goto("/coach/");
+    await expect(page.locator("#coach")).toBeVisible(); // hidden stays hidden without a coach, but shows with one
     await button(page, "Play it").click();
     await expect(page.locator(".challenge .prompt")).toHaveText(challenge.prompt);
 

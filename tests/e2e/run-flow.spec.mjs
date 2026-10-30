@@ -41,7 +41,7 @@ test("a run says where you are: 1 of 2, 2 of 2, then the boss", async ({ page })
 test("the first pass hands over to the second chances: how it went, what is next, and a choice", async ({ page }) => {
   await playChapter(page, "full-run");
   await missMulti(page, multi);
-  await expect(page.getByText("It comes back after this pass, for half points.")).toBeVisible();
+  await expect(page.getByText("It gets a second chance after this pass, for half points.")).toBeVisible();
   await next(page);
   await missRecall(page);
   await next(page);
@@ -49,6 +49,7 @@ test("the first pass hands over to the second chances: how it went, what is next
   const card = page.locator(".handoff");
   await expect(card).toBeVisible();
   await expect(card).toContainText("First pass done: 0 of 2 right.");
+  await expect(card.getByRole("heading")).toBeFocused();
   await expect(card).toContainText("2 second chances next, for half points");
   await expect(card.getByRole("listitem")).toHaveText([multi.prompt, recall.prompt]);
   await expect(page.locator(".kind")).toHaveCount(0); // no challenge until the player says go
@@ -114,20 +115,24 @@ test("a miss that ends a streak says so gently, with the best of the run", async
   await button(page, boss.costs[wrong(boss.costs, boss.cost)]).click();
   await button(page, "Check").click();
   await expect(page.locator(".feedback")).toContainText("Streak reset, best this run: 2.");
+  await expect(page.locator(".feedback")).not.toContainText("second chance"); // a boss miss does not come back
 });
 
 test("the rating you chose stays marked, and the others are marked as not chosen", async ({ page }) => {
   await playChapter(page, "drill-recall");
   await button(page, "Show the answer").click();
+  await expect(rating(page, "⚡ Easy")).not.toHaveAttribute("aria-pressed", /.*/); // a choice, not a toggle, until made
   await rating(page, "⚡ Easy").click();
-  await expect(rating(page, "⚡ Easy")).toHaveAttribute("aria-pressed", "true");
+  // Chosen, it carries a tick, so its name is now "✓ ⚡ Easy".
+  const chosen = page.getByRole("button", { name: /✓ ⚡ Easy/ });
+  await expect(chosen).toHaveAttribute("aria-pressed", "true");
   for (const other of ["❌ Missed it", "🟡 Partly", "✅ Got it"]) {
     await expect(rating(page, other)).toHaveAttribute("aria-pressed", "false");
   }
   // Every rating is switched off once chosen, but only the chosen one stays at full strength.
-  const opacity = (name) => rating(page, name).evaluate((el) => globalThis.getComputedStyle(el).opacity);
-  expect(await opacity("⚡ Easy")).toBe("1");
-  expect(Number(await opacity("✅ Got it"))).toBeLessThan(1);
+  const opacity = (locator) => locator.evaluate((el) => globalThis.getComputedStyle(el).opacity);
+  expect(await opacity(chosen)).toBe("1");
+  expect(Number(await opacity(rating(page, "✅ Got it")))).toBeLessThan(1);
 });
 
 test("a lightning round that ends on the last question shows the time it took and marks the right answer", async ({
@@ -136,6 +141,7 @@ test("a lightning round that ends on the last question shows the time it took an
   await page.clock.install();
   await playChapter(page, "drill-lightning");
   await button(page, `Start: ${lightning.seconds || 90} seconds`).click();
+  await page.clock.runFor(7000);
   const reach = Object.fromEntries(lightning.pairs);
   for (let i = 0; i < lightning.pairs.length - 1; i++) {
     await button(page, reach[await page.locator(".lightning-q").textContent()]).click();
@@ -150,7 +156,7 @@ test("a lightning round that ends on the last question shows the time it took an
   await expect(page.locator(".options .opt.missed")).toHaveText(reach[heard]);
   await expect(page.locator(".options .opt.wrong")).toHaveText(wrongText ?? "");
   const timer = page.locator(".timer");
-  await expect(timer).toHaveText(/Done in \d+s/);
+  await expect(timer).toHaveText("✅ Done in 7s");
   const done = await timer.textContent();
   await page.clock.runFor(5000);
   await expect(timer).toHaveText(done ?? "");
@@ -207,4 +213,57 @@ test("on a phone the hand-off, the second-chance bar and the chosen rating fit a
   await expect(page.locator(".kind")).toContainText("🔁 Second chance · half points");
   expect(await fits()).toBe(true);
   expect(await seriousViolations()).toEqual([]);
+});
+
+test("a miss in the second chance does not promise another, and a first miss does not reset a streak", async ({
+  page,
+}) => {
+  await playChapter(page, "full-run");
+  await missMulti(page, multi);
+  await expect(page.locator(".feedback")).not.toContainText("Streak reset");
+  await next(page);
+  await missRecall(page);
+  await next(page);
+  await button(page, "Start now").click();
+  await missMulti(page, multi);
+  await expect(page.locator(".feedback .verdict")).toContainText("❌ Not this time");
+  await expect(page.locator(".feedback")).not.toContainText("second chance after this pass");
+  await expect(page.locator(".feedback")).not.toContainText("Streak reset");
+});
+
+test("a replay of the misses that misses again hands over too, and Save for later ends on the results", async ({
+  page,
+}) => {
+  await playChapter(page, "full-run");
+  await missMulti(page, multi);
+  await next(page);
+  await gotRecall(page);
+  await next(page);
+  await button(page, "Save for later").click(); // the boss, then the results
+  await button(page, boss.choices[boss.correct]).click();
+  await button(page, boss.reasons[boss.reason]).click();
+  await button(page, boss.costs[boss.cost]).click();
+  await button(page, "Check").click();
+  await next(page);
+  await button(page, "Replay the misses").click(); // a run of one, with no boss
+  await expect(page.locator(".runbar")).toContainText("1 of 1");
+  await missMulti(page, multi);
+  await next(page);
+  await expect(page.locator(".handoff")).toContainText("First pass done: 0 of 1 right.");
+  await button(page, "Save for later").click();
+  await expect(page.getByText("Missed first time:")).toBeVisible();
+  await expect(page.locator(".kind")).toHaveCount(0);
+});
+
+test("a long first pass lists the first five misses and counts the rest", async ({ page }) => {
+  await playChapter(page, "long-pass");
+  for (let i = 0; i < 7; i++) {
+    await missRecall(page);
+    await next(page);
+  }
+  const card = page.locator(".handoff");
+  await expect(card).toContainText("First pass done: 0 of 7 right.");
+  await expect(card).toContainText("7 second chances next, for half points");
+  await expect(card.getByRole("listitem")).toHaveCount(6);
+  await expect(card.getByRole("listitem").last()).toHaveText("and 2 more");
 });

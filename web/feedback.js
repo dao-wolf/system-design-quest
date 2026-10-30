@@ -175,7 +175,7 @@ export function feedback({ c, isBoss, comesBack, streakLost }, res, fraction, s)
       verdict,
       s.multiplier > 1 && s.correct ? h("span", { class: "combo" }, `  🔥 ×${s.multiplier}`) : "",
     ),
-    comesBack ? h("div", { class: "muted" }, "It comes back after this pass, for half points.") : null,
+    comesBack ? h("div", { class: "muted" }, "It gets a second chance after this pass, for half points.") : null,
     streakLost ? h("div", { class: "muted" }, `Streak reset, best this run: ${streakLost}.`) : null,
     reveal ? reveal(c, res) : null,
     h("div", { style: "margin-top:8px" }, richText(c.explain)),

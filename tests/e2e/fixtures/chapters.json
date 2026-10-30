@@ -434,6 +434,90 @@
           "source": "https://kafka.apache.org/"
         }
       ]
+    },
+    {
+      "chapter": 13,
+      "slug": "long-pass",
+      "title": "A long first pass",
+      "emoji": "📏",
+      "pillar": "Core concepts",
+      "blurb": "Seven recall cards, then a boss: enough misses to need a short list.",
+      "open": true,
+      "boss": "long-boss",
+      "challenges": [
+        {
+          "id": "long-1",
+          "type": "recall",
+          "bloom": "remember",
+          "prompt": "Long pass, question 1: what does a cache give up for speed?",
+          "answer": "Freshness.",
+          "explain": "A cached copy can be out of date.",
+          "source": "https://en.wikipedia.org/wiki/Cache_(computing)"
+        },
+        {
+          "id": "long-2",
+          "type": "recall",
+          "bloom": "remember",
+          "prompt": "Long pass, question 2: what does a cache give up for speed?",
+          "answer": "Freshness.",
+          "explain": "A cached copy can be out of date.",
+          "source": "https://en.wikipedia.org/wiki/Cache_(computing)"
+        },
+        {
+          "id": "long-3",
+          "type": "recall",
+          "bloom": "remember",
+          "prompt": "Long pass, question 3: what does a cache give up for speed?",
+          "answer": "Freshness.",
+          "explain": "A cached copy can be out of date.",
+          "source": "https://en.wikipedia.org/wiki/Cache_(computing)"
+        },
+        {
+          "id": "long-4",
+          "type": "recall",
+          "bloom": "remember",
+          "prompt": "Long pass, question 4: what does a cache give up for speed?",
+          "answer": "Freshness.",
+          "explain": "A cached copy can be out of date.",
+          "source": "https://en.wikipedia.org/wiki/Cache_(computing)"
+        },
+        {
+          "id": "long-5",
+          "type": "recall",
+          "bloom": "remember",
+          "prompt": "Long pass, question 5: what does a cache give up for speed?",
+          "answer": "Freshness.",
+          "explain": "A cached copy can be out of date.",
+          "source": "https://en.wikipedia.org/wiki/Cache_(computing)"
+        },
+        {
+          "id": "long-6",
+          "type": "recall",
+          "bloom": "remember",
+          "prompt": "Long pass, question 6: what does a cache give up for speed?",
+          "answer": "Freshness.",
+          "explain": "A cached copy can be out of date.",
+          "source": "https://en.wikipedia.org/wiki/Cache_(computing)"
+        },
+        {
+          "id": "long-7",
+          "type": "recall",
+          "bloom": "remember",
+          "prompt": "Long pass, question 7: what does a cache give up for speed?",
+          "answer": "Freshness.",
+          "explain": "A cached copy can be out of date.",
+          "source": "https://en.wikipedia.org/wiki/Cache_(computing)"
+        },
+        {
+          "id": "long-boss",
+          "type": "recall",
+          "bloom": "remember",
+          "prompt": "Name one way to keep a cache fresh.",
+          "answer": "A time to live.",
+          "explain": "A time to live bounds how stale an entry can get.",
+          "source": "https://en.wikipedia.org/wiki/Time_to_live"
+        }
+      ]
     }
   ]
 }

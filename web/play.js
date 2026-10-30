@@ -107,21 +107,24 @@ function toBossOrResults() {
 
 // Between the passes: how the first went, what comes next and what it is worth, and a choice. Saving them for later
 // goes on to the boss; the misses wait on the results screen to replay.
+const SHOWN_MISSES = 5;
 function showHandoff() {
   const run = app.run;
   const n = run.misses.length;
   const start = h("button", { class: "btn", onclick: startSecondChances }, "Start now");
+  const heading = h("h3", { tabindex: "-1" }, `First pass done: ${run.right} of ${run.answered} right.`);
   show(
     runBar(run, "First pass done"),
     h(
       "div",
       { class: "card handoff" },
-      h("h3", {}, `First pass done: ${run.right} of ${run.answered} right.`),
+      heading,
       h("p", {}, `${n} second chance${n === 1 ? "" : "s"} next, for half points:`),
       h(
         "ul",
         {},
-        run.misses.map((c) => h("li", {}, c.prompt)),
+        run.misses.slice(0, SHOWN_MISSES).map((c) => h("li", {}, c.prompt)),
+        n > SHOWN_MISSES ? h("li", { class: "muted" }, `and ${n - SHOWN_MISSES} more`) : null,
       ),
       h(
         "div",
@@ -131,7 +134,7 @@ function showHandoff() {
       ),
     ),
   );
-  start.focus();
+  heading.focus(); // a screen reader hears how the pass went; the first Tab reaches Start now
 }
 
 // Where the player is: "3 of 9" in the first pass, "Second chance 1 of 4" in the next, "Boss" at the end.
@@ -168,8 +171,7 @@ function runBar(run, label) {
       h("b", {}, run.chapter ? `${run.chapter.emoji} ${run.chapter.title}` : "Coach's challenge"),
       " ",
       runDots(),
-      " ",
-      h("span", { class: "muted" }, label),
+      label ? [" ", h("span", { class: "muted" }, label)] : null,
     ),
     h("button", { class: "btn ghost small", onclick: leave }, "Map"),
   );

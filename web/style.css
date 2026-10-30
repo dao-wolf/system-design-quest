@@ -427,6 +427,9 @@ h3 {
   border-radius: 999px;
   padding: 4px 12px;
 }
+.btn.ghost.sel::before {
+  content: "✓ ";
+}
 .btn.ghost.sel {
   opacity: 1;
   background: var(--accent);

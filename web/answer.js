@@ -65,7 +65,7 @@ export async function finishTurn(turn, res, reveal) {
   await post(answerEvent(turn, res, fraction, s));
   tally(turn, fraction, s);
   turn.comesBack = comesBack(turn, s);
-  turn.streakLost = !s.correct && streak >= 2 ? turn.run.bestCombo : 0;
+  turn.streakLost = s.combo < streak && streak >= 2 ? Math.max(streak, turn.run.bestCombo) : 0;
   if (reveal) reveal(fraction);
   turn.feedbackSlot.replaceChildren(feedback(turn, res, fraction, s));
   celebrate(before, prog(), turn.isBoss && fraction >= 0.8);
