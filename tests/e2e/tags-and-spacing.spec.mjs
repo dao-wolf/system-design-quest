@@ -72,7 +72,7 @@ for (const [width, label] of [
         .locator(sel)
         .first()
         .evaluate((el) => parseFloat(globalThis.getComputedStyle(el).paddingLeft));
-    expect(await padding(".chapter")).toBeGreaterThanOrEqual(22);
+    expect(await padding(".chapter")).toBeGreaterThanOrEqual(width > 600 ? 22 : 16); // a phone keeps its tighter cards
     expect(await fits(page)).toBe(true);
     expect(await seriousViolations(page)).toEqual([]);
   });

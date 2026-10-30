@@ -3,6 +3,21 @@
 
 export const BLOOM_POINTS = { remember: 10, understand: 15, apply: 20, analyse: 30, evaluate: 40, create: 60 };
 export const BOSS_POINTS = 100;
+
+// What each level of the ladder asks of the player, for the tag's tooltip.
+const BLOOM_HELP = {
+  remember: "recall the fact",
+  understand: "explain it in your own words",
+  apply: "use it on a case you have not seen",
+  analyse: "take a design apart and compare the parts",
+  evaluate: "weigh the options and defend a choice",
+  create: "design something new",
+};
+export function bloomHelp(level) {
+  const ladder = `Levels go ${Object.keys(BLOOM_POINTS).join(", ")}.`;
+  if (!Object.hasOwn(BLOOM_HELP, level)) return ladder;
+  return `${level[0].toUpperCase()}${level.slice(1)}: ${BLOOM_HELP[level]}. ${ladder}`;
+}
 export const BOSS_PASS = 0.8; // a boss counts as beaten at 80%
 export const STAR_ACCURACY = 0.8; // a replay day earns a star at 80% first-try right
 export const TOLERANCE = 1.6; // estimates count within this factor either way

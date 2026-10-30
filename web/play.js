@@ -1,6 +1,6 @@
 // A run through a chapter: starting it, then each challenge in turn until the results. What happens once an answer
 // is in lives in answer.js.
-import { runOrder } from "./engine.js";
+import { bloomHelp, runOrder } from "./engine.js";
 import { app, chapterBySlug } from "./state.js";
 import { h, show, toast } from "./dom.js";
 import { baseEvent, post } from "./store.js";
@@ -180,7 +180,7 @@ function kindPills({ run, c, second, isBoss }) {
     "div",
     { class: "kind" },
     h("span", { class: "pill" }, TYPE_LABEL[c.type]),
-    h("span", { class: "pill", title: "Revised Bloom's level" }, c.bloom),
+    h("span", { class: "pill bloom", title: bloomHelp(c.bloom) }, c.bloom),
     isBoss ? h("span", { class: "pill boss-tag" }, "👹 Boss") : null,
     second ? h("span", { class: "pill" }, "🔁 Second chance · half points") : null,
     run.phase === "single" ? h("span", { class: "pill" }, "🎯 Coach's challenge") : null,
