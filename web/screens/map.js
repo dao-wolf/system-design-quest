@@ -8,6 +8,8 @@ import { jumpTo, startBoss, startChapter } from "../play.js";
 import { renderProfile } from "./profile.js";
 
 const PROFILE_FIELDS = ["name", "company", "role", "interview_type", "interview_date"];
+// An icon with room before the words that follow it.
+const icon = (emoji) => h("span", { class: "icon", "aria-hidden": "true" }, emoji);
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 const list = (items) => new Intl.ListFormat("en-GB").format(items);
 
@@ -52,7 +54,7 @@ function hero(p) {
         "div",
         {},
         h("h1", {}, me.name ? `${me.name}'s quest map` : "Your quest map"),
-        about ? h("div", { class: "muted" }, `🎯 ${about}`) : null,
+        about ? h("div", { class: "muted" }, icon("🎯"), about) : null,
         h(
           "div",
           { class: "muted" },
@@ -124,8 +126,8 @@ function nextUpCard(up, p) {
       h(
         "div",
         {},
-        h("div", { class: "muted" }, "▶️ One next action"),
-        h("h2", {}, `${up.emoji} ${label(up)}: ${up.title}`),
+        h("div", { class: "muted" }, icon("▶️"), "One next action"),
+        h("h2", {}, icon(up.emoji), `${label(up)}: ${up.title}`),
         h("div", { class: "muted" }, up.blurb),
       ),
       nextUpButton(up, p.chapters[up.slug]),
@@ -228,7 +230,7 @@ function sections(p) {
   const beatenOf = (list) => list.filter((ch) => p.chapters[ch.slug].bossBeaten).length;
   const out = [
     sectionHead(
-      "📚 Training ",
+      [icon("📚"), "Training "],
       `${beatenOf(training)} of ${training.length} bosses beaten · chapters open in order, or jump in`,
     ),
     h("div", { class: "chapters" }, training.map(card)),
@@ -236,7 +238,7 @@ function sections(p) {
   if (quests.length) {
     out.push(
       sectionHead(
-        "🗺️ Quests ",
+        [icon("🗺️"), "Quests "],
         `${beatenOf(quests)} of ${quests.length} beaten · design one product end to end; all open`,
       ),
       h("div", { class: "chapters" }, quests.map(card)),

@@ -1,6 +1,6 @@
 // A run through a chapter: starting it, then each challenge in turn until the results. What happens once an answer
 // is in lives in answer.js.
-import { runOrder } from "./engine.js";
+import { bloomHelp, runOrder } from "./engine.js";
 import { app, chapterBySlug } from "./state.js";
 import { h, show, toast } from "./dom.js";
 import { baseEvent, post } from "./store.js";
@@ -175,12 +175,33 @@ function runBar(run, label) {
   );
 }
 
+// The Bloom tag explains itself on hover (title), and on a tap or the keyboard in a note under the tags.
+function bloomTag(c) {
+  const help = bloomHelp(c.bloom);
+  const note = h("div", { class: "bloom-note muted", hidden: true }, help);
+  const tag = h(
+    "button",
+    {
+      class: "pill bloom",
+      type: "button",
+      title: help,
+      "aria-expanded": "false",
+      onclick: () => {
+        note.hidden = !note.hidden;
+        tag.setAttribute("aria-expanded", String(!note.hidden));
+      },
+    },
+    c.bloom,
+  );
+  return [tag, note];
+}
+
 function kindPills({ run, c, second, isBoss }) {
   return h(
     "div",
     { class: "kind" },
     h("span", { class: "pill" }, TYPE_LABEL[c.type]),
-    h("span", { class: "pill", title: "Revised Bloom's level" }, c.bloom),
+    bloomTag(c),
     isBoss ? h("span", { class: "pill boss-tag" }, "👹 Boss") : null,
     second ? h("span", { class: "pill" }, "🔁 Second chance · half points") : null,
     run.phase === "single" ? h("span", { class: "pill" }, "🎯 Coach's challenge") : null,
