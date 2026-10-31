@@ -152,7 +152,7 @@ function runDots() {
     { class: "dots", title: "This run" },
     run.queue.map((q, i) => {
       const r = run.results.find((x) => x.id === q.c.id && x.second === q.second);
-      const cls = r ? (r.correct ? "right" : r.fraction >= 0.5 ? "part" : "wrong") : i === run.i ? "now" : "";
+      const cls = r ? (r.correct ? "right" : r.fraction > 0 ? "part" : "wrong") : i === run.i ? "now" : "";
       return h("i", { class: cls });
     }),
   );

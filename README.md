@@ -14,7 +14,7 @@ knowledge; quests are katas where you design one product end to end.
 - **Eleven kinds of challenge:** trade-off duels, filling and labelling
   diagrams, spotting the flaw, estimates, written answers, lightning rounds,
   timed sprints and more.
-- **Points for right answers only.** A miss costs nothing and comes back later.
+- **Points for answers that are at least half right.** A miss costs nothing and comes back later.
 - **An optional profile:** add who you're interviewing with and when, for a
   countdown. Leave it empty and the game works the same.
 - No account, no adverts, and nothing you type leaves your browser.

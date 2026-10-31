@@ -63,7 +63,7 @@ for (const [place, chapter] of PLACES) {
 
     await missIt(page);
 
-    await expect(page.getByText("Missed first time:")).toBeVisible();
+    await expect(page.getByText("Not fully right first time:")).toBeVisible();
     await expect(page.getByRole("listitem").filter({ hasText: challenge.prompt })).toBeVisible();
     await button(page, "Replay the misses").click();
     await expect(page.locator(".kind")).toContainText("🎯 Coach's challenge");

@@ -12,7 +12,7 @@ const BOSS_BEATEN = "👹 Boss beaten!";
 // The verdict and its colour. A boss counts as beaten at 80%, short of full marks.
 function verdictOf(s, fraction, isBoss) {
   if (s.correct) return [isBoss ? BOSS_BEATEN : "✅ Right", "right"];
-  if (fraction < 0.5) return ["❌ Not this time", "wrong"];
+  if (fraction <= 0) return ["❌ Not this time", "wrong"];
   return isBoss && fraction >= 0.8 ? [BOSS_BEATEN, "right"] : ["🟡 Partly", "part"];
 }
 
@@ -164,7 +164,7 @@ function feedbackActions(c, res) {
 }
 
 // The sum on one line, and the table that works it out, folded away until the player asks.
-function receiptCard({ line, rows }) {
+function receiptCard({ line, note, rows }) {
   const table = h(
     "table",
     { "aria-label": "How the points were worked out" },
@@ -178,6 +178,7 @@ function receiptCard({ line, rows }) {
     "div",
     { class: "receipt" },
     h("div", { class: "sum" }, line),
+    note ? h("div", { class: "muted" }, `(${note})`) : null,
     h("details", {}, h("summary", {}, "How this was worked out"), table),
   );
 }
@@ -188,12 +189,21 @@ export function feedback({ c, isBoss, comesBack, streakLost, state }, res, fract
   return h(
     "div",
     { class: `feedback ${cls}` },
-    s.points ? h("div", { class: "plus" }, `+${s.points}`) : null,
     h(
       "div",
-      { class: "verdict" },
-      verdict,
-      s.multiplier > 1 && s.correct ? h("span", { class: "combo" }, `  🔥 ×${s.multiplier}`) : "",
+      { class: "head" },
+      h(
+        "div",
+        { class: "verdict" },
+        verdict,
+        s.multiplier > 1 && s.correct ? h("span", { class: "combo" }, `  🔥 ×${s.multiplier}`) : "",
+      ),
+      h(
+        "div",
+        { class: s.points ? "plus" : "plus none" },
+        `+${s.points}`,
+        s.correct ? null : h("small", {}, ` of ${s.max}`),
+      ),
     ),
     comesBack ? h("div", { class: "muted" }, "It gets a second chance after this pass, for half points.") : null,
     streakLost ? h("div", { class: "muted" }, `Streak reset, best this run: ${streakLost}.`) : null,

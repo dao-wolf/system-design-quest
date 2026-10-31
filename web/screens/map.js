@@ -58,7 +58,7 @@ function hero(p) {
         h(
           "div",
           { class: "muted" },
-          `${beaten} of ${totalBosses} bosses beaten. ${bossesLeft(p)}Points come from right answers only; a miss costs nothing and comes back later.`,
+          `${beaten} of ${totalBosses} bosses beaten. ${bossesLeft(p)}Half right or better earns points; a miss costs nothing and comes back later.`,
         ),
       ),
       badgeList(p.badges),

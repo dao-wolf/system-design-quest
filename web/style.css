@@ -727,14 +727,35 @@ textarea {
   border-radius: 10px;
   background: var(--soft);
 }
+.feedback .head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  column-gap: 12px;
+}
 .plus {
-  position: absolute;
-  right: 16px;
-  top: 10px;
   font-weight: 900;
   font-size: 22px;
   color: var(--accent);
   animation: pop 1.1s ease-out;
+}
+.plus.none {
+  animation: none; /* nothing was won, so nothing pops */
+}
+.plus small {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.coverage {
+  margin: 8px 0;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.coverage ul {
+  margin: 2px 0 6px;
+  padding-left: 20px;
 }
 @keyframes pop {
   0% {

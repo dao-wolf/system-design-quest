@@ -210,13 +210,18 @@ function partsOf(ch, fraction, { confidence, secondChance, isBoss }, combo) {
   };
 }
 
-// The points are the parts multiplied together and rounded once; exact keeps the decimal for the card to show.
+const product = (p) => p.base * p.share * p.sure * p.streak * p.second;
+
+// The points are the parts multiplied together and rounded once; exact keeps the decimal for the card to show, and max
+// is what the same answer would have paid had everything been right.
 export function score(ch, fraction, { confidence = null, combo = 0, secondChance = false, isBoss = false } = {}) {
   const correct = fraction >= 0.999;
+  const how = { confidence, secondChance, isBoss };
   const newCombo = nextCombo(combo, correct, secondChance);
-  const parts = partsOf(ch, fraction, { confidence, secondChance, isBoss }, newCombo);
-  const exact = parts.base * parts.share * parts.sure * parts.streak * parts.second;
-  return { points: Math.round(exact), exact, combo: newCombo, correct, multiplier: parts.streak, parts };
+  const parts = partsOf(ch, fraction, how, newCombo);
+  const exact = product(parts);
+  const max = Math.round(product(partsOf(ch, 1, how, nextCombo(combo, true, secondChance))));
+  return { points: Math.round(exact), exact, max, combo: newCombo, correct, multiplier: parts.streak, parts };
 }
 
 // ---------- the player's profile: every field optional ----------

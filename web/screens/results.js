@@ -57,7 +57,7 @@ function missedList(missed) {
   return h(
     "div",
     {},
-    h("div", { class: "muted" }, "Missed first time:"),
+    h("div", { class: "muted" }, "Not fully right first time:"),
     h(
       "ul",
       {},
