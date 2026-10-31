@@ -19,6 +19,7 @@ export function bloomHelp(level) {
   return `${level[0].toUpperCase()}${level.slice(1)}: ${BLOOM_HELP[level]}. ${ladder}`;
 }
 export const BOSS_PASS = 0.8; // a boss counts as beaten at 80%
+export const PASS_MARK = 0.5; // an answer must be at least this much right to score anything
 export const STAR_ACCURACY = 0.8; // a replay day earns a star at 80% first-try right
 export const TOLERANCE = 1.6; // estimates count within this factor either way
 export const OPEN_AT_START = 2; // chapters open before any boss is beaten
@@ -191,24 +192,31 @@ export function multiplier(combo) {
   return combo >= 5 ? 3 : combo >= 3 ? 2 : 1;
 }
 
-// Points before the combo: a share of the base for half right or better, and ×1.5 when sure and right.
-function basePoints(ch, fraction, confidence, isBoss) {
-  const base = isBoss ? BOSS_POINTS : (BLOOM_POINTS[ch.bloom] ?? 10);
-  const pts = fraction >= 0.5 ? base * fraction : 0;
-  return fraction >= 0.999 && confidence === "sure" ? pts * 1.5 : pts;
-}
-
 // A miss ends the combo; a second chance keeps it where it was; any other right answer adds one.
 function nextCombo(combo, correct, secondChance) {
   if (!correct) return 0;
   return secondChance ? combo : combo + 1;
 }
 
+// The factors of the sum, so a card can show its working. Below the pass mark nothing is scored, so the share is 0 and
+// the base is still there to see. Sure pays only when everything is right.
+function partsOf(ch, fraction, { confidence, secondChance, isBoss }, combo) {
+  return {
+    base: isBoss ? BOSS_POINTS : (BLOOM_POINTS[ch.bloom] ?? 10),
+    share: fraction >= PASS_MARK ? fraction : 0,
+    sure: fraction >= 0.999 && confidence === "sure" ? 1.5 : 1,
+    streak: multiplier(combo),
+    second: secondChance ? 0.5 : 1,
+  };
+}
+
+// The points are the parts multiplied together and rounded once; exact keeps the decimal for the card to show.
 export function score(ch, fraction, { confidence = null, combo = 0, secondChance = false, isBoss = false } = {}) {
   const correct = fraction >= 0.999;
   const newCombo = nextCombo(combo, correct, secondChance);
-  const pts = basePoints(ch, fraction, confidence, isBoss) * multiplier(newCombo) * (secondChance ? 0.5 : 1);
-  return { points: Math.round(pts), combo: newCombo, correct, multiplier: multiplier(newCombo) };
+  const parts = partsOf(ch, fraction, { confidence, secondChance, isBoss }, newCombo);
+  const exact = parts.base * parts.share * parts.sure * parts.streak * parts.second;
+  return { points: Math.round(exact), exact, combo: newCombo, correct, multiplier: parts.streak, parts };
 }
 
 // ---------- the player's profile: every field optional ----------
