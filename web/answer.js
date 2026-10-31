@@ -1,5 +1,5 @@
 // Once an answer is in: score it with the engine, record it, count it towards the run, then show the feedback.
-import { check, score } from "./engine.js";
+import { bossBeaten, check, score } from "./engine.js";
 import { app, prog } from "./state.js";
 import { baseEvent, post, summarise } from "./store.js";
 import { celebrate, renderStats } from "./stats.js";
@@ -68,6 +68,6 @@ export async function finishTurn(turn, res, reveal) {
   turn.streakLost = s.combo < streak && streak >= 2 ? Math.max(streak, turn.run.bestCombo) : 0;
   if (reveal) reveal(fraction);
   turn.feedbackSlot.replaceChildren(feedback(turn, res, fraction, s));
-  celebrate(before, prog(), turn.isBoss && fraction >= 0.8);
+  celebrate(before, prog(), turn.isBoss && bossBeaten(fraction));
   renderStats();
 }

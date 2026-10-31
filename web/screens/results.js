@@ -2,6 +2,7 @@
 import { app, nextUp, prog } from "../state.js";
 import { h, show } from "../dom.js";
 import { baseEvent, post } from "../store.js";
+import { bossBeaten } from "../engine.js";
 import { renderStats } from "../stats.js";
 import { startChapter, startSingle } from "../play.js";
 import { renderMap } from "./map.js";
@@ -37,7 +38,7 @@ function bossStat(result) {
   return h(
     "span",
     { class: "stat" },
-    result >= 0.8 ? "👹 Boss beaten" : `👹 Boss: ${Math.round(result * 100)}%, needs 80%`,
+    bossBeaten(result) ? "👹 Boss beaten" : `👹 Boss: ${Math.round(result * 100)}%, needs 80%`,
   );
 }
 
@@ -108,7 +109,7 @@ export function showResults() {
     ch,
     single: run.phase === "single",
     missed: missedFirstTime(run, ch),
-    bossFailed: run.bossResult != null && run.bossResult < 0.8,
+    bossFailed: run.bossResult != null && !bossBeaten(run.bossResult),
     otherUp: up && up.slug !== ch?.slug ? up : null,
   };
   app.run = null;

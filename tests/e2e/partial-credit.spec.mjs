@@ -109,6 +109,40 @@ test("a sprint with nothing ticked says so, and lists everything to add", async 
   await expect(page.locator(".feedback .coverage li")).toHaveText(sprint.checks);
 });
 
+// A boss counts as beaten at 80%, but the card is amber for any partial answer: it says which side of the line it is on.
+async function playToBoss(page) {
+  await playChapter(page, "full-run");
+  for (const i of multi.correct) await button(page, multi.options[i]).click();
+  await button(page, "Check").click();
+  await button(page, "Next ▶").click();
+  await button(page, "Show the answer").click();
+  await button(page, "✅ Got it").click();
+  await button(page, "Next ▶").click();
+}
+for (const [label, answer] of [
+  ["a third", { reason: 1, cost: 0 }],
+  ["two thirds", { cost: 0 }],
+]) {
+  test(`a boss answered ${label} right says it is not beaten, and what it needs`, async ({ page }) => {
+    await playToBoss(page);
+    await answerDuel(page, boss, answer);
+    await expect(page.locator(".feedback.part .verdict")).toContainText("🟡 Partly");
+    await seen(page.locator(".feedback .boss-note"), "Not beaten yet: a boss needs 80%.");
+  });
+}
+
+test("a boss answered all right is beaten and says nothing about falling short, and a question that is not a boss never does", async ({
+  page,
+}) => {
+  await playToBoss(page);
+  await answerDuel(page, boss);
+  await expect(page.locator(".feedback .verdict")).toContainText("👹 Boss beaten!");
+  await expect(page.locator(".feedback .boss-note")).toHaveCount(0);
+  await playChapter(page, "drill-duel");
+  await answerDuel(page, duel, { cost: 0 });
+  await expect(page.locator(".feedback .boss-note")).toHaveCount(0);
+});
+
 // The points beside a long verdict on the narrowest phone: a boss beaten on a streak is the longest verdict there is.
 test("at 320 px a long verdict and the points do not run into each other", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 900 });

@@ -14,6 +14,7 @@ import {
   bloomHelp,
   BLOOM_POINTS,
   BOSS_PASS,
+  bossBeaten,
   BOSS_POINTS,
   PASS_MARK,
 } from "../web/engine.js";
@@ -130,6 +131,14 @@ test("parts: each factor on its own", () => {
     const s = score(c, fraction, opts);
     assert.equal(part in s ? s[part] : s.parts[part], want, `${part} at ${fraction} with ${JSON.stringify(opts)}`);
   }
+});
+
+test("bossBeaten: 80% or better, and nothing short of it", () => {
+  assert.deepEqual(
+    [bossBeaten(0.8), bossBeaten(1), bossBeaten(0.7999), bossBeaten(0.5), bossBeaten(0)],
+    [true, true, false, false, false],
+  );
+  assert.equal(BOSS_PASS, 0.8);
 });
 
 test("max: what the same answer pays when everything is right, under the same Sure, streak and second chance", () => {

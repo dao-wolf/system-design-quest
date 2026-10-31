@@ -19,6 +19,7 @@ export function bloomHelp(level) {
   return `${level[0].toUpperCase()}${level.slice(1)}: ${BLOOM_HELP[level]}. ${ladder}`;
 }
 export const BOSS_PASS = 0.8; // a boss counts as beaten at 80%
+export const bossBeaten = (fraction) => fraction >= BOSS_PASS;
 export const PASS_MARK = 0.5; // an answer must be at least this much right to score anything
 export const STAR_ACCURACY = 0.8; // a replay day earns a star at 80% first-try right
 export const TOLERANCE = 1.6; // estimates count within this factor either way
@@ -296,7 +297,7 @@ export function localDay(d) {
 
 // A boss answer counts for its chapter even if the chapter's boss has since changed (a personal layer on or off).
 const beatsBoss = (e, ch) =>
-  e.fraction >= BOSS_PASS && (e.challenge === ch.boss || (e.boss === true && e.chapter === ch.chapter));
+  bossBeaten(e.fraction) && (e.challenge === ch.boss || (e.boss === true && e.chapter === ch.chapter));
 
 // A replay day counts when enough of the chapter was answered (the latest answer to each) at 80% or better.
 function goodDay(events, need) {
