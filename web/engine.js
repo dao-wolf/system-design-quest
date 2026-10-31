@@ -233,6 +233,21 @@ export function score(ch, fraction, { confidence = null, combo = 0, secondChance
   return { points: Math.round(exact), exact, max, combo: newCombo, correct, multiplier: parts.streak, parts };
 }
 
+const CONFIDENCES = ["guess", "fairly", "sure"];
+
+// How often each confidence was right on the first try at a question: neither a second chance nor a question answered
+// before (a replay of the misses, another day) counts, for the results screen.
+export function calibration(answers) {
+  const out = {};
+  for (const a of answers) {
+    if (a.second || a.repeat || !CONFIDENCES.includes(a.confidence)) continue;
+    const t = (out[a.confidence] ||= { n: 0, right: 0 });
+    t.n++;
+    if (a.correct) t.right++;
+  }
+  return out;
+}
+
 // ---------- the player's profile: every field optional ----------
 
 export const PROFILE_TEXT = ["name", "company", "role"];

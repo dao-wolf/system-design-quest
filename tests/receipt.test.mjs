@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { score, multiplier } from "../web/engine.js";
-import { coverage, receipt } from "../web/receipt.js";
+import { calibrationLine, coverage, receipt } from "../web/receipt.js";
 
 const duel = { type: "duel", bloom: "evaluate" };
 const understand = { type: "multi", bloom: "understand", correct: [0, 2] };
@@ -64,6 +64,23 @@ test("a second chance has a row of its own, and says that it does not add to the
   assert.equal(rows(second)["Second chance"], "×0.5 (second chances pay half)");
   assert.equal(rows(second).Streak, "×1 (a second chance keeps the streak where it was, and does not add to it)");
   assert.equal(rows(second).Total, "7.5 → +8");
+});
+
+test("the calibration line says it counts first tries, in the order Sure, Fairly, Guess", () => {
+  const cal = { guess: { n: 2, right: 0 }, sure: { n: 4, right: 3 }, fairly: { n: 1, right: 1 } };
+  assert.equal(
+    calibrationLine(cal),
+    "On first tries: Sure 3 of 4 right · Fairly 1 of 1 right · Guess 0 of 2 right. A well-judged Sure is right about 4 times in 5.",
+  );
+  assert.equal(calibrationLine({ fairly: { n: 1, right: 0 } }), "On first tries: Fairly 0 of 1 right.");
+  assert.equal(calibrationLine({}), null);
+});
+
+test("the yardstick for Sure appears from three Sures, and whatever they scored", () => {
+  const sure = (n, right) => calibrationLine({ sure: { n, right } });
+  assert.equal(sure(2, 2), "On first tries: Sure 2 of 2 right.");
+  assert.equal(sure(3, 0), "On first tries: Sure 0 of 3 right. A well-judged Sure is right about 4 times in 5.");
+  assert.ok(sure(5, 5).endsWith(" A well-judged Sure is right about 4 times in 5."));
 });
 
 test("a boss is worth 100 whatever its tag, and a tag the ladder does not know is called the base", () => {

@@ -99,6 +99,25 @@ export function receipt(c, fraction, s, ctx) {
   };
 }
 
+const CONFIDENCE_NAMES = [
+  ["sure", "Sure"],
+  ["fairly", "Fairly"],
+  ["guess", "Guess"],
+];
+
+const SURE_SAMPLE = 3; // the yardstick for Sure only means something once there are a few of them
+
+// "On first tries: Sure 3 of 4 right · Fairly 1 of 1 right. A well-judged Sure is right about 4 times in 5."
+// Null when nothing was rated.
+export function calibrationLine(cal) {
+  const parts = CONFIDENCE_NAMES.filter(([k]) => cal[k]).map(
+    ([k, name]) => `${name} ${cal[k].right} of ${cal[k].n} right`,
+  );
+  if (!parts.length) return null;
+  const yardstick = cal.sure?.n >= SURE_SAMPLE ? " A well-judged Sure is right about 4 times in 5." : "";
+  return `On first tries: ${parts.join(" · ")}.${yardstick}`;
+}
+
 // Which of a list the player ticked, and which are left to add, in the order the list gives them.
 export function coverage(items, ticked) {
   const got = new Set(ticked);
