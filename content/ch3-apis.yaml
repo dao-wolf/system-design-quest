@@ -69,8 +69,9 @@ challenges:
       - DELETE
       - PATCH
       - HEAD
+      - CONNECT
     correct: [0, 2, 3, 5]
-    explain: "GET and HEAD only read. PUT sets a resource to a given state. DELETE removes it, and a second DELETE may answer 404 but changes nothing more. POST creates something new each time, and PATCH isn't guaranteed safe to repeat (think \"add 1 to the count\"). Retry the idempotent ones freely; give POST an idempotency key."
+    explain: "GET and HEAD only read. PUT sets a resource to a given state. DELETE removes it, and a second DELETE may answer 404 but changes nothing more. POST creates something new each time, and PATCH isn't guaranteed safe to repeat (think \"add 1 to the count\"). Retry the idempotent ones freely; give POST an idempotency key. CONNECT opens a tunnel and isn't idempotent either."
     source: https://developer.mozilla.org/en-US/docs/Glossary/Idempotent
 
   - id: a-05

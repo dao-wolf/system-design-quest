@@ -26,3 +26,19 @@ export async function seen(locator, text) {
   await expect(locator).toBeVisible();
   await expect(locator).toHaveText(text);
 }
+
+// The contrast ratio of an element's text on its own solid background, for the controls that axe skips (disabled ones).
+export const contrastOf = (locator) =>
+  locator.evaluate((el) => {
+    const style = globalThis.getComputedStyle(el);
+    const lin = (c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+    const light = (css) => {
+      const [r, g, b] = css
+        .match(/[\d.]+/g)
+        .slice(0, 3)
+        .map((v) => lin(v / 255));
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    };
+    const [a, b] = [light(style.color), light(style.backgroundColor)].sort((x, y) => y - x);
+    return (a + 0.05) / (b + 0.05);
+  });

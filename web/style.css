@@ -435,6 +435,24 @@ button.pill {
   border-color: var(--bad);
   background: var(--bad-soft);
 }
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.opt .badge {
+  float: right;
+  margin-left: 8px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 800;
+}
 .opt.missed {
   border-style: dashed;
   border-color: var(--good);

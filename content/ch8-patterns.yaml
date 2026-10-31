@@ -39,8 +39,9 @@ challenges:
       - Add up counts before storing them, one row a minute per metric
       - Add read replicas
       - Put a cache in front of the database
+      - Add more indexes to the table
     correct: [0, 1, 2, 3]
-    explain: "Writes scale by doing fewer, cheaper or spread-out writes: batch them, pre-aggregate them, shard them, or use a store built for appends. Replicas copy every write, so they add work, and a cache helps reads, not writes. Say: \"Batch and pre-aggregate first, then shard by metric if it's still too much.\""
+    explain: "Writes scale by doing fewer, cheaper or spread-out writes: batch them, pre-aggregate them, shard them, or use a store built for appends. Replicas copy every write, so they add work. A cache helps reads, not writes. Extra indexes make each write slower. Say: \"Batch and pre-aggregate first, then shard by metric if it's still too much.\""
     source: https://www.hellointerview.com/learn/system-design/in-a-hurry/patterns
 
   - id: pat-03
@@ -256,8 +257,9 @@ challenges:
       - Use a spatial index, such as PostGIS or Redis GEO
       - Sort every restaurant by distance on each request
       - Add read replicas and scan the whole table on each one
+      - Add an index on restaurant name
     correct: [0, 1, 2, 3]
-    explain: "A geohash turns a point into a string where a shared prefix means a nearby cell; a quadtree splits busy areas into smaller cells. Search the rider's cell and its neighbours, since a place just over the edge is still near, then filter by real distance. Places rarely move, so busy cells cache well. Say: \"Spatial index, neighbouring cells, then exact distance.\""
+    explain: "A geohash turns a point into a string where a shared prefix means a nearby cell; a quadtree splits busy areas into smaller cells. Search the rider's cell and its neighbours, since a place just over the edge is still near, then filter by real distance. A name index can't find what is near. Places rarely move, so busy cells cache well. Say: \"Spatial index, neighbouring cells, then exact distance.\""
     source: https://en.wikipedia.org/wiki/Geohash
 
   - id: pat-boss

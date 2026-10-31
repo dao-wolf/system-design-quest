@@ -134,6 +134,18 @@ class Gate(unittest.TestCase):
         _, errors = self.run_gate([chapter([recall("a-01"), sticker])])
         self.assertTrue(any("overlap or touch" in e for e in errors))
 
+    def test_a_multi_needs_more_than_one_and_a_half_times_as_many_options_as_right_ones(self):
+        def multi(options, right):
+            return {"id": "a-02", "type": "multi", "bloom": "understand", "prompt": "Which?", "explain": "Because.",
+                    "source": SRC, "options": [f"o{i}" for i in range(options)], "correct": list(range(right))}
+        for options, right, ok in ((3, 2, False), (4, 2, True), (6, 4, False), (7, 4, True), (7, 5, False), (8, 5, True), (8, 6, False)):
+            _, errors = self.run_gate([chapter([recall("a-01"), multi(options, right)])])
+            self.assertEqual(not any("ticking everything" in e for e in errors), ok, (options, right))
+            # The rule is the arithmetic: ticking all of them scores (2 x right - options) / right of the base.
+            self.assertEqual(ok, (2 * right - options) / right < 0.5, (options, right))
+        _, errors = self.run_gate([chapter([recall("a-01"), multi(8, 6)])])
+        self.assertTrue(any("at most 5 right" in e for e in errors), errors)  # eight options cannot hold six right
+
     def test_boss_prompt_label_is_refused(self):
         _, errors = self.run_gate([chapter([recall("a-01", prompt="Boss: do it")])])
         self.assertTrue(any("labels the boss itself" in e for e in errors))

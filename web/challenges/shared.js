@@ -49,14 +49,17 @@ export function optionList(items, { multi = false, onChange }) {
   box._buttons = buttons;
   return box;
 }
-export function mark(box, rightValues, chosenValues) {
+// How an option came out: picked and right, picked and wrong, or right and left out.
+const outcome = (isRight, chosen) => (chosen ? (isRight ? "right" : "wrong") : isRight ? "missed" : null);
+
+// After checking: each option shows how it came out and, given badges, what that was worth.
+export function mark(box, rightValues, chosenValues, badges) {
   for (const b of box._buttons) {
     b.disabled = true;
-    const isRight = rightValues.includes(b._value),
-      chosen = chosenValues.includes(b._value);
     b.classList.remove("sel");
-    if (isRight && chosen) b.classList.add("right");
-    else if (chosen) b.classList.add("wrong");
-    else if (isRight) b.classList.add("missed");
+    const result = outcome(rightValues.includes(b._value), chosenValues.includes(b._value));
+    if (result) b.classList.add(result);
+    const worth = badges && { ...badges, missed: "missed" }[result];
+    if (worth) b.append(h("span", { class: "sr-only" }, ", mark: "), h("span", { class: "badge" }, worth));
   }
 }

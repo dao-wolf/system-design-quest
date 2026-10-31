@@ -17,8 +17,9 @@ challenges:
       - It makes the export itself finish sooner
       - It guarantees each export runs exactly once
       - Web servers and workers can be scaled separately
+      - The user doesn't need to check back for the result
     correct: [0, 1, 2, 5]
-    explain: "A queue splits \"accepted\" from \"done\": the request returns at once, workers drain the backlog at their own pace, and failures retry out of sight. It adds delay and possible duplicates; it doesn't remove them. Say: \"Accept, return a job ID, process in the background.\" For cheap, instant work, stay synchronous."
+    explain: "A queue splits \"accepted\" from \"done\": the request returns at once, workers drain the backlog at their own pace, and failures retry out of sight. It adds delay and possible duplicates; it doesn't remove them. The user still checks the job ID, or is told, when it is done. Say: \"Accept, return a job ID, process in the background.\" For cheap, instant work, stay synchronous."
     source: https://github.com/donnemartin/system-design-primer
 
   - id: async-02

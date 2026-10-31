@@ -230,8 +230,10 @@ def check_challenge(rep, c, ch_where, prefixes, vault, allow_vault):
                     check_index(rep, where, "correct", i, n)
                 if len(set(corr)) != len(corr) or len(corr) >= n:
                     rep.err(where, "'correct' must be distinct and leave at least one wrong option")
-                if "pick" in c and c["pick"] != len(corr):
-                    rep.err(where, "'pick' must equal the number of correct options")
+                if n <= 1.5 * len(corr):
+                    rep.err(where, f"{n} options for {len(corr)} right is too few: ticking everything would score "
+                                   "half or more, so it needs more than 1.5 times as many options as right ones "
+                                   "(at most 8 options, so at most 5 right)")
     elif t == "duel":
         for field, idx, lo, hi in (("choices", "correct", 2, 4), ("reasons", "reason", 3, 5),
                                    ("costs", "cost", 3, 5)):
