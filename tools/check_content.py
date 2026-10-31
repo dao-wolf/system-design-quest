@@ -190,6 +190,15 @@ def check_diagram(rep, where, d):
     return ids
 
 
+def check_recall(rep, where, c):
+    """A recall has an answer; key points (which set its points) and a principle are optional."""
+    check_len(rep, where, "answer", c.get("answer"), LIMITS["answer"])
+    if "key_points" in c:
+        check_list(rep, where, "key_points", c["key_points"], 2, 6, 140)
+    if "principle" in c:
+        check_len(rep, where, "principle", c["principle"], LIMITS["principle"])
+
+
 def check_challenge(rep, c, ch_where, prefixes, vault, allow_vault):
     cid = c.get("id", "?")
     where = f"{ch_where} / {cid}"
@@ -219,11 +228,7 @@ def check_challenge(rep, c, ch_where, prefixes, vault, allow_vault):
         rep.err(where, "'sealed_until' isn't allowed: content carries no dates and unlocks by progress")
 
     if t == "recall":
-        check_len(rep, where, "answer", c.get("answer"), LIMITS["answer"])
-        if "key_points" in c:
-            check_list(rep, where, "key_points", c["key_points"], 2, 6, 140)
-        if "principle" in c:
-            check_len(rep, where, "principle", c["principle"], LIMITS["principle"])
+        check_recall(rep, where, c)
     elif t == "multi":
         if check_list(rep, where, "options", c.get("options"), 3, 8):
             n = len(c["options"])
