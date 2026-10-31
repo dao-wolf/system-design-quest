@@ -2,7 +2,8 @@
 import { app, nextUp, prog } from "../state.js";
 import { h, show } from "../dom.js";
 import { baseEvent, post } from "../store.js";
-import { bossBeaten } from "../engine.js";
+import { bossBeaten, calibration } from "../engine.js";
+import { calibrationLine } from "../receipt.js";
 import { renderStats } from "../stats.js";
 import { startChapter, startSingle } from "../play.js";
 import { renderMap } from "./map.js";
@@ -88,6 +89,12 @@ function resultButtons(next) {
   );
 }
 
+// How often each confidence was right, so "Sure" can be set against how often Sure was right.
+function calibrationNote(results) {
+  const line = calibrationLine(calibration(results));
+  return line ? h("p", { class: "muted calibration" }, line) : null;
+}
+
 export function showResults() {
   const run = app.run;
   const p = prog();
@@ -120,6 +127,7 @@ export function showResults() {
       h("div", { class: "muted" }, ch ? `${ch.emoji} ${ch.title}` : "Coach's challenge"),
       h("div", { class: "big" }, `+${run.points} XP`),
       resultStats(run, c),
+      calibrationNote(run.results),
       h("h3", { style: "margin-top:16px" }, "▶️ One next action"),
       h("p", {}, nextAction(next)),
       missedList(next.missed),

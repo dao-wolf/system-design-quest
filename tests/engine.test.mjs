@@ -18,6 +18,7 @@ import {
   BOSS_POINTS,
   PASS_MARK,
   baseOf,
+  calibration,
 } from "../web/engine.js";
 
 const multi = { type: "multi", bloom: "understand", options: ["a", "b", "c", "d"], correct: [0, 2] };
@@ -190,6 +191,30 @@ test("points: the decimal is kept in exact and rounded once, halves up", () => {
   assert.ok(Math.abs(score({ bloom: "evaluate" }, 2 / 3).exact - 80 / 3) < 1e-9);
   assert.equal(score(understand, 1, { confidence: "sure" }).exact, 22.5);
   assert.equal(score(understand, 1, { confidence: "sure" }).points, 23);
+});
+
+test("calibration: first tries only, by the confidence chosen, counting a miss and a part as not right", () => {
+  const a = (confidence, correct, extra = {}) => ({ confidence, correct, ...extra });
+  const answers = [
+    a("sure", true),
+    a("sure", false),
+    a("sure", true),
+    a("fairly", true),
+    a("guess", false),
+    a(null, true), // a question with no Sure picker
+    a("sure", true, { second: true }), // a second chance is not a first try
+    a("sure", true, { repeat: true }), // nor is a question answered before
+    a("sure", false, { fraction: 0.6 }), // a part is not right
+    a("maybe", true), // nor is a confidence the picker does not offer
+    a("__proto__", true),
+  ];
+  assert.deepEqual(calibration(answers), {
+    sure: { n: 4, right: 2 },
+    fairly: { n: 1, right: 1 },
+    guess: { n: 1, right: 0 },
+  });
+  assert.deepEqual(calibration([]), {});
+  assert.equal({}.n, undefined); // an odd key must not reach Object.prototype
 });
 
 const bundle = {

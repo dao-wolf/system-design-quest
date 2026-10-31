@@ -32,6 +32,9 @@ function answerEvent({ run, c, second, isBoss, state }, res, fraction, s) {
   return ev;
 }
 
+// A question answered at first try before is not a first try again, however it comes round (a replay, another day).
+const answeredBefore = (c) => app.events.some((e) => e.kind === "answer" && e.challenge === c.id && !e.second_chance);
+
 // A first-try miss in the main run comes back for a second chance; a boss sets the run's boss result.
 const comesBack = ({ run, second, isBoss }, s) => !s.correct && !second && !isBoss && run.phase === "main";
 function tally(turn, fraction, s) {
@@ -40,7 +43,18 @@ function tally(turn, fraction, s) {
   run.points += s.points;
   if (s.correct) run.right++;
   run.bestCombo = Math.max(run.bestCombo, s.combo);
-  run.results.push({ id: c.id, second, correct: s.correct, fraction, points: s.points, boss: isBoss });
+  const { confidence } = turn.state;
+  const repeat = turn.repeat;
+  run.results.push({
+    id: c.id,
+    second,
+    correct: s.correct,
+    fraction,
+    points: s.points,
+    boss: isBoss,
+    confidence,
+    repeat,
+  });
   if (comesBack(turn, s)) run.misses.push(c);
   if (isBoss) run.bossResult = fraction;
 }
@@ -62,6 +76,7 @@ export async function finishTurn(turn, res, reveal) {
     isBoss: turn.isBoss,
   });
   app.combo = s.combo;
+  turn.repeat = answeredBefore(c); // before this answer is recorded
   await post(answerEvent(turn, res, fraction, s));
   tally(turn, fraction, s);
   turn.comesBack = comesBack(turn, s);
