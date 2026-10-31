@@ -14,6 +14,8 @@ import {
   bloomHelp,
   BLOOM_POINTS,
   BOSS_PASS,
+  BOSS_POINTS,
+  PASS_MARK,
 } from "../web/engine.js";
 
 const multi = { type: "multi", bloom: "understand", options: ["a", "b", "c", "d"], correct: [0, 2] };
@@ -80,6 +82,61 @@ test("points: harder is worth more, sure-and-right ×1.5, combos ×2 and ×3, mi
   assert.equal(score(ch, 0.4, {}).points, 0);
   assert.equal(score(ch, 1, { secondChance: true, combo: 1 }).combo, 1);
   assert.equal(score(ch, 1, { isBoss: true }).points, 100);
+});
+
+// The points are the factors of the sum multiplied together and rounded once, so a card can show its working.
+test("parts: base, share, Sure, streak and second chance multiply back to the points, for every combination", () => {
+  const grid = (...lists) => lists.reduce((rows, list) => rows.flatMap((row) => list.map((x) => [...row, x])), [[]]);
+  const blooms = [...Object.keys(BLOOM_POINTS), undefined];
+  const axes = [blooms, [false, true], [0, 0.3, 0.4999, 0.5, 2 / 3, 0.75, 0.998, 1], [null, "guess", "fairly", "sure"]];
+  for (const [bloom, isBoss, fraction, confidence, combo, secondChance] of grid(
+    ...axes,
+    [0, 1, 2, 3, 4, 5, 8],
+    [false, true],
+  )) {
+    const s = score({ bloom }, fraction, { confidence, combo, secondChance, isBoss });
+    const exact = Object.values(s.parts).reduce((product, x) => product * x);
+    assert.equal(s.exact, exact);
+    assert.equal(s.points, Math.round(exact));
+  }
+});
+
+test("parts: each factor on its own", () => {
+  const ch = { bloom: "analyse" };
+  assert.deepEqual(score(ch, 1).parts, { base: 30, share: 1, sure: 1, streak: 1, second: 1 });
+  for (const [bloom, points] of Object.entries(BLOOM_POINTS)) assert.equal(score({ bloom }, 1).parts.base, points);
+  const sure = { confidence: "sure" };
+  const cases = [
+    [{ bloom: "nonsense" }, 1, {}, "base", 10], // a tag the ladder lacks is worth the least
+    [ch, 1, { isBoss: true }, "base", BOSS_POINTS], // a boss is worth 100, whatever its tag
+    [ch, PASS_MARK, {}, "share", 0.5], // the share counts from the pass mark up, and is 0 below it
+    [ch, 0.4999, {}, "share", 0],
+    [ch, 0.4999, {}, "base", 30], // the base is still shown when nothing is scored
+    [ch, 0.999, sure, "sure", 1.5], // 0.999 and over counts as all right, and only then does Sure pay
+    [ch, 0.998, sure, "sure", 1],
+    [ch, 1, { confidence: "fairly" }, "sure", 1],
+    [ch, 0.999, {}, "correct", true],
+    [ch, 0.998, {}, "correct", false],
+    [ch, 1, { combo: 1 }, "streak", 1], // ×2 from the third right answer in a row, ×3 from the fifth
+    [ch, 1, { combo: 2 }, "streak", 2],
+    [ch, 1, { combo: 3 }, "streak", 2],
+    [ch, 1, { combo: 4 }, "streak", 3],
+    [ch, 0.9, { combo: 4 }, "streak", 1], // not fully right: the streak is over
+    [ch, 1, { combo: 2, secondChance: true }, "streak", 1], // a second chance keeps it where it was
+    [ch, 1, { combo: 3, secondChance: true }, "multiplier", 2],
+    [ch, 1, { secondChance: true }, "second", 0.5],
+  ];
+  for (const [c, fraction, opts, part, want] of cases) {
+    const s = score(c, fraction, opts);
+    assert.equal(part in s ? s[part] : s.parts[part], want, `${part} at ${fraction} with ${JSON.stringify(opts)}`);
+  }
+});
+
+test("points: the decimal is kept in exact and rounded once, halves up", () => {
+  const understand = { bloom: "understand" };
+  assert.ok(Math.abs(score({ bloom: "evaluate" }, 2 / 3).exact - 80 / 3) < 1e-9);
+  assert.equal(score(understand, 1, { confidence: "sure" }).exact, 22.5);
+  assert.equal(score(understand, 1, { confidence: "sure" }).points, 23);
 });
 
 const bundle = {

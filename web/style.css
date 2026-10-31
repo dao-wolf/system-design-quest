@@ -752,6 +752,44 @@ textarea {
 .source {
   font-size: 13px;
 }
+/* The accent is too faint for a link on a coloured card in dark mode (4.07 to 1), so it takes the text colour. */
+.feedback .source a {
+  color: var(--ink);
+}
+.receipt {
+  margin: 10px 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+.receipt .sum {
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+.receipt summary {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--muted);
+  cursor: pointer;
+}
+.receipt table {
+  width: 100%;
+  margin-top: 8px;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.receipt th,
+.receipt td {
+  padding: 3px 0;
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+.receipt th {
+  padding-right: 14px;
+  white-space: nowrap;
+}
 
 /* results */
 .big {

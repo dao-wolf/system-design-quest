@@ -1,5 +1,6 @@
 // Shared by the journeys that play the fixture chapters (tests/e2e/fixtures/chapters.json) on the /types/ host page.
 import { readFileSync } from "node:fs";
+import { expect } from "@playwright/test";
 
 export const fixture = JSON.parse(readFileSync("tests/e2e/fixtures/chapters.json", "utf8"));
 export const chapter = (slug) => fixture.chapters.find((c) => c.slug === slug);
@@ -18,4 +19,10 @@ export async function missMulti(page, c) {
   const wrong = c.options.map((_, i) => i).filter((i) => !c.correct.includes(i));
   for (const i of wrong) await button(page, c.options[i]).click();
   await button(page, "Check").click();
+}
+
+// toHaveText passes on a hidden element, so check that it can be seen as well.
+export async function seen(locator, text) {
+  await expect(locator).toBeVisible();
+  await expect(locator).toHaveText(text);
 }

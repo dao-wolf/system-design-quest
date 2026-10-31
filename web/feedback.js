@@ -1,9 +1,10 @@
-// The feedback after an answer: the verdict, the points, the explanation and its source, then Next, Ask coach and
-// Flag.
+// The feedback after an answer: the verdict, the points and the sum behind them, the explanation and its source, then
+// Next, Ask coach and Flag.
 import { app } from "./state.js";
 import { h, richText } from "./dom.js";
 import { baseEvent, post, summarise } from "./store.js";
-import { REVEAL_TEXT } from "./challenges/index.js";
+import { receipt } from "./receipt.js";
+import { REVEAL_TEXT, SELF_GRADED } from "./challenges/index.js";
 import { advance } from "./play.js";
 
 const BOSS_BEATEN = "👹 Boss beaten!";
@@ -162,7 +163,26 @@ function feedbackActions(c, res) {
   return [actions, flag.slot];
 }
 
-export function feedback({ c, isBoss, comesBack, streakLost }, res, fraction, s) {
+// The sum on one line, and the table that works it out, folded away until the player asks.
+function receiptCard({ line, rows }) {
+  const table = h(
+    "table",
+    { "aria-label": "How the points were worked out" },
+    h(
+      "tbody",
+      {},
+      rows.map(([k, v]) => h("tr", {}, h("th", { scope: "row" }, k), h("td", {}, v))),
+    ),
+  );
+  return h(
+    "div",
+    { class: "receipt" },
+    h("div", { class: "sum" }, line),
+    h("details", {}, h("summary", {}, "How this was worked out"), table),
+  );
+}
+
+export function feedback({ c, isBoss, comesBack, streakLost, state }, res, fraction, s) {
   const [verdict, cls] = verdictOf(s, fraction, isBoss);
   const reveal = REVEAL_TEXT[c.type];
   return h(
@@ -177,6 +197,14 @@ export function feedback({ c, isBoss, comesBack, streakLost }, res, fraction, s)
     ),
     comesBack ? h("div", { class: "muted" }, "It gets a second chance after this pass, for half points.") : null,
     streakLost ? h("div", { class: "muted" }, `Streak reset, best this run: ${streakLost}.`) : null,
+    receiptCard(
+      receipt(c, fraction, s, {
+        isBoss,
+        confidence: state.confidence,
+        sureOffered: !SELF_GRADED.has(c.type),
+        streakLost,
+      }),
+    ),
     reveal ? reveal(c, res) : null,
     h("div", { style: "margin-top:8px" }, richText(c.explain)),
     sourceLine(c.source),
