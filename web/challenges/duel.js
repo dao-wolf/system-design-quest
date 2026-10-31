@@ -22,6 +22,8 @@ export function duel(c, body, finish) {
     return list;
   });
   btn.onclick = () =>
-    finish({ ...pick }, () => groups.forEach(([key, , , right], i) => mark(lists[i], [right], [pick[key]])));
+    finish({ ...pick }, () =>
+      groups.forEach(([key, , , right], i) => mark(lists[i], [right], [pick[key]], { right: "⅓", wrong: "0" })),
+    );
   body.append(btn);
 }

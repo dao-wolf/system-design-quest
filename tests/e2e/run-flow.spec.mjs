@@ -158,15 +158,13 @@ test("a lightning round that runs out of time says so", async ({ page }) => {
   await expect(page.locator(".timer")).toHaveText("⏱️ Time's up");
 });
 
-test("a pick-all-that-apply question does not give the number to pick, and says when Check unlocks", async ({
+test("a pick-all-that-apply question does not give the number to pick, and says what a wrong tick costs", async ({
   page,
 }) => {
   await playChapter(page, "drill-multi");
   await expect(page.locator(".kind .pill").first()).toHaveText("☑️ Pick all that apply");
   await expect(page.getByText(/Pick \d+\./)).toHaveCount(0);
-  await expect(
-    page.getByText("Tick them, then Check. Check unlocks when you have ticked the right number."),
-  ).toBeVisible();
+  await expect(page.getByText("Tick the ones that apply. Each wrong tick cancels a right one.")).toBeVisible();
 });
 
 // The hand-off, the run bar's labels and the marked rating, on a phone: nothing overflows and axe finds nothing serious.

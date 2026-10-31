@@ -32,6 +32,14 @@ test("multi: right picks minus wrong picks, over the number correct", () => {
   assert.equal(check(multi, { picked: [0, 1, 3] }).fraction, 0);
 });
 
+test("multi: ticking everything pays half at 4 right of 6, a quarter at 4 of 7, and nothing once wrong ticks outnumber right", () => {
+  const everything = (options, right) =>
+    check({ type: "multi", correct: [...Array(right).keys()] }, { picked: [...Array(options).keys()] }).fraction;
+  assert.equal(everything(6, 4), 0.5); // the gate refuses this shape
+  assert.equal(everything(7, 4), 0.25);
+  assert.equal(everything(8, 1), 0); // seven wrong ticks cancel the one right: clamped at nothing, not below
+});
+
 test("duel: a third each for choice, reason and cost", () => {
   assert.equal(check(duel, { choice: 1, reason: 0, cost: 2 }).correct, true);
   assert.ok(Math.abs(check(duel, { choice: 1, reason: 1, cost: 2 }).fraction - 2 / 3) < 1e-9);

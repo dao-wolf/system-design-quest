@@ -44,19 +44,19 @@ The boss is one of the chapter's challenges, often a harder one of any type. Lis
 
 ## Types
 
-| Type        | Extra fields                                                                                                               | Scored                                                 |
-| ----------- | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| `recall`    | `answer`                                                                                                                   | Self-graded: again 0, hard ½, good 1, easy 1           |
-| `multi`     | `options` (3–8), `correct` (list of 0-based indices), optional `pick` (how many to choose; defaults to the number correct) | Right picks minus wrong picks, over the number correct |
-| `duel`      | `choices` (2–4), `correct` (index); `reasons` (3–5), `reason` (index); `costs` (3–5), `cost` (index)                       | One third each for choice, reason and cost             |
-| `write`     | `key_points` (2–6), optional `model` (a model answer under 500 characters)                                                 | Self-graded: key points ticked over key points         |
-| `estimate`  | `generator` with `kind` and its `params` (see below)                                                                       | Within the tolerance of the worked answer              |
-| `fill`      | `diagram`, `slots` (node id → the right label), `palette` (labels, including every right one plus distractors)             | Right slots over slots                                 |
-| `sticker`   | `diagram`, `stickers` (labels), `answers` (node id → list of stickers it needs; nodes left out need none)                  | Right placements minus wrong ones, over the right ones |
-| `flaw`      | `diagram`, `flaw` (the weak node's id), `fixes` (3–5), `fix` (index)                                                       | Half for the node, half for the fix                    |
-| `order`     | `items`, in the right order (3–8); the game shuffles them                                                                  | Items in the right place over items                    |
-| `lightning` | `pairs` (6 or more `[when you hear, reach for]`), optional `seconds` (default 90)                                          | Right answers over pairs shown                         |
-| `sprint`    | `minutes`, `checks` (3–8 things to tick after)                                                                             | Self-graded: checks ticked over checks                 |
+| Type        | Extra fields                                                                                                   | Scored                                                 |
+| ----------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| `recall`    | `answer`                                                                                                       | Self-graded: again 0, hard ½, good 1, easy 1           |
+| `multi`     | `options` (3–8, more than 1.5 times as many as `correct`), `correct` (list of 0-based indices)                 | Right picks minus wrong picks, over the number correct |
+| `duel`      | `choices` (2–4), `correct` (index); `reasons` (3–5), `reason` (index); `costs` (3–5), `cost` (index)           | One third each for choice, reason and cost             |
+| `write`     | `key_points` (2–6), optional `model` (a model answer under 500 characters)                                     | Self-graded: key points ticked over key points         |
+| `estimate`  | `generator` with `kind` and its `params` (see below)                                                           | Within the tolerance of the worked answer              |
+| `fill`      | `diagram`, `slots` (node id → the right label), `palette` (labels, including every right one plus distractors) | Right slots over slots                                 |
+| `sticker`   | `diagram`, `stickers` (labels), `answers` (node id → list of stickers it needs; nodes left out need none)      | Right placements minus wrong ones, over the right ones |
+| `flaw`      | `diagram`, `flaw` (the weak node's id), `fixes` (3–5), `fix` (index)                                           | Half for the node, half for the fix                    |
+| `order`     | `items`, in the right order (3–8); the game shuffles them                                                      | Items in the right place over items                    |
+| `lightning` | `pairs` (6 or more `[when you hear, reach for]`), optional `seconds` (default 90)                              | Right answers over pairs shown                         |
+| `sprint`    | `minutes`, `checks` (3–8 things to tick after)                                                                 | Self-graded: checks ticked over checks                 |
 
 ### Diagrams
 
