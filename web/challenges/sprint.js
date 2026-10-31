@@ -1,6 +1,7 @@
 // The sprint challenge.
 import { app, clearTimers } from "../state.js";
 import { h, toast } from "../dom.js";
+import { tickList } from "./shared.js";
 
 export function sprint(c, body, finish) {
   let left = c.minutes * 60,
@@ -36,28 +37,8 @@ export function sprint(c, body, finish) {
     clearTimers();
     go.remove();
     done.remove();
-    const ticks = c.checks.map((txt, i) =>
-      h("label", { class: "opt", style: "display:flex;gap:10px" }, h("input", { type: "checkbox", value: i }), txt),
-    );
     body.append(
-      h(
-        "div",
-        { class: "group" },
-        h("div", { class: "label" }, "Tick what you did"),
-        h("div", { class: "options" }, ticks),
-      ),
-      h(
-        "button",
-        {
-          class: "btn",
-          onclick: (e) => {
-            e.target.disabled = true;
-            const ticked = ticks.map((t, i) => (t.querySelector("input").checked ? i : null)).filter((x) => x != null);
-            finish({ ticked, seconds_used: c.minutes * 60 - left });
-          },
-        },
-        "Score it",
-      ),
+      ...tickList(c.checks, "Tick what you did", (ticked) => finish({ ticked, seconds_used: c.minutes * 60 - left })),
     );
   };
   body.append(clock, hint, h("div", { class: "row", style: "justify-content:center" }, go, done));

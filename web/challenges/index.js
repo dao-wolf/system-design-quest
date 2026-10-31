@@ -32,7 +32,7 @@ export const RENDER = { recall, multi, duel, write, estimate, fill, sticker, fla
 
 export const REVEAL_TEXT = {
   estimate: revealEstimate,
-  recall: () => null,
+  recall: (c, res) => (c.key_points ? coverageNote(coverage(c.key_points, res.ticked)) : null),
   write: (c, res) => coverageNote(coverage(c.key_points, res.ticked)),
   sprint: (c, res) => coverageNote(coverage(c.checks, res.ticked)),
 };

@@ -399,6 +399,11 @@ button.pill {
   font-weight: 650;
   margin: 4px 0 14px;
 }
+fieldset.group {
+  border: 0;
+  padding: 0;
+  min-width: 0;
+}
 .group {
   margin: 12px 0;
 }
@@ -765,6 +770,12 @@ textarea {
   font-size: 13px;
   font-weight: 700;
   color: var(--muted);
+}
+.said {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
 }
 .coverage {
   margin: 8px 0;

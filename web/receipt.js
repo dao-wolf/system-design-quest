@@ -15,15 +15,20 @@ const PARTS = {
   order: (c) => [c.items.length, "in the right place"],
   fill: (c) => [Object.keys(c.slots).length, "slots right"],
   lightning: (c) => [c.pairs.length, "pairs"],
+  recall: (c) => c.key_points && [c.key_points.length, "key points"],
   multi: (c) => [c.correct.length, "right picks, less wrong ones"],
   sticker: (c) => [Object.values(c.answers).flat().length, "right stickers, less wrong ones"],
 };
 
+// The parts of an answer, if its type has any (a recall has them only when it has key points).
+const partsOf = (c) => (Object.hasOwn(PARTS, c.type) ? PARTS[c.type](c) : undefined);
+
 // What was right, short for the line and longer for the table: "2 of 3 parts" and "2 of 3 parts = 67%".
 function shareWords(c, fraction, correct) {
   if (correct) return ["all right", "all of it"];
-  if (!Object.hasOwn(PARTS, c.type)) return [pct(fraction), pct(fraction)];
-  const [total, noun] = PARTS[c.type](c);
+  const parts = partsOf(c);
+  if (!parts) return [pct(fraction), pct(fraction)];
+  const [total, noun] = parts;
   const count = `${Math.round(fraction * total)} of ${total} ${noun}`;
   return [count, `${count} = ${pct(fraction)}`];
 }
@@ -77,9 +82,8 @@ function rowsOf(name, right, s, ctx) {
 
 // What it takes to score, in the answer's own parts ("2 of 3 parts"). A type with no parts has no pass mark to show.
 function needed(c) {
-  if (!Object.hasOwn(PARTS, c.type)) return null;
-  const [total, noun] = PARTS[c.type](c);
-  return `${Math.ceil(PASS_MARK * total)} of ${total} ${noun}`;
+  const parts = partsOf(c);
+  return parts ? `${Math.ceil(PASS_MARK * parts[0])} of ${parts[0]} ${parts[1]}` : null;
 }
 
 // ctx: whether it was a boss, how sure the player said they were (and whether Sure was offered), and the streak that

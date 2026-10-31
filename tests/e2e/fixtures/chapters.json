@@ -493,6 +493,42 @@
           "explain": "A time to live bounds how stale an entry can get."
         }
       ]
+    },
+    {
+      "chapter": 14,
+      "slug": "drill-keypoints",
+      "title": "Key points drill",
+      "emoji": "🎯",
+      "pillar": "Core concepts",
+      "blurb": "A recall scored from key points, then a boss.",
+      "open": true,
+      "boss": "keypoints-boss",
+      "challenges": [
+        {
+          "id": "keypoints-1",
+          "type": "recall",
+          "bloom": "understand",
+          "prompt": "Why put a cache in front of a database?",
+          "answer": "Repeat reads come from memory, so they are faster and the database does less work, at the price of a copy that can be stale.",
+          "principle": "A cache trades freshness for speed and load.",
+          "key_points": [
+            "Reads come from memory, so they are faster",
+            "The database does less work",
+            "The copy can be stale"
+          ],
+          "explain": "A cache serves repeat reads from memory. The cost is a copy that can lag behind the database.",
+          "source": "https://en.wikipedia.org/wiki/Cache_(computing)"
+        },
+        {
+          "id": "keypoints-boss",
+          "type": "recall",
+          "bloom": "remember",
+          "prompt": "Name one way to keep a cache fresh.",
+          "answer": "A time to live.",
+          "key_points": ["A time to live bounds how stale it gets", "Update or delete it when the source changes"],
+          "explain": "A time to live bounds how stale an entry can get."
+        }
+      ]
     }
   ]
 }
