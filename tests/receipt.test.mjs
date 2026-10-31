@@ -139,6 +139,7 @@ test("each type counts its own parts, a type with none shows a percentage, and w
     [{ type: "lightning", pairs: Array(4).fill(0) }, 0.75, "3 of 4 pairs"],
     [{ type: "multi", correct: [0, 1, 2] }, 2 / 3, "2 of 3 right picks, less wrong ones"],
     [{ type: "sticker", answers: { a: ["x"], b: ["y", "z"] } }, 2 / 3, "2 of 3 right stickers, less wrong ones"],
+    [{ type: "recall", key_points: Array(3).fill(0) }, 2 / 3, "2 of 3 key points"],
     [{ type: "recall" }, 0.5, "50%"],
     [{ type: "estimate" }, 0, "0%"],
   ];
@@ -146,7 +147,7 @@ test("each type counts its own parts, a type with none shows a percentage, and w
     const r = receipt(c, fraction, score(c, fraction), { isBoss: false, confidence: null, sureOffered: true });
     const pct = `${Math.round(fraction * 100)}%`;
     assert.ok(r.line.includes(` × ${words}`), `${c.type}: ${r.line}`);
-    const right = ["recall", "estimate"].includes(c.type) ? words : `${words} = ${pct}`;
+    const right = / of /.test(words) ? `${words} = ${pct}` : words; // a type with no parts shows only the percentage
     assert.equal(rows(r).Right, / of /.test(words) ? `${right} (50% needed to score)` : right, c.type);
   }
 });

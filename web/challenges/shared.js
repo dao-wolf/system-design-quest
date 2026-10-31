@@ -19,6 +19,30 @@ export function coverageNote({ covered, next }) {
   );
 }
 
+// A list of checkboxes and a button that scores the ones ticked: the key points of a written or spoken answer.
+export function tickList(items, heading, onScore) {
+  const ticks = items.map((txt, i) =>
+    h("label", { class: "opt", style: "display:flex;gap:10px" }, h("input", { type: "checkbox", value: i }), txt),
+  );
+  const score = h(
+    "button",
+    {
+      class: "btn",
+      onclick: () => {
+        score.disabled = true;
+        const boxes = ticks.map((t) => t.querySelector("input"));
+        boxes.forEach((x) => (x.disabled = true));
+        onScore(boxes.flatMap((x, i) => (x.checked ? [i] : [])));
+      },
+    },
+    "Score it",
+  );
+  return [
+    h("fieldset", { class: "group" }, h("legend", { class: "label" }, heading), h("div", { class: "options" }, ticks)),
+    score,
+  ];
+}
+
 export const submitBtn = (label = "Check") => h("button", { class: "btn", disabled: true }, label);
 
 export function optionList(items, { multi = false, onChange }) {

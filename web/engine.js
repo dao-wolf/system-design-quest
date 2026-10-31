@@ -142,7 +142,9 @@ function rightMinusWrong(picks, want) {
 
 // One checker for each challenge type: the share of the answer that was right, from 0 to 1.
 const CHECKS = {
-  recall: (ch, res) => SELF_GRADES[res.grade] ?? 0,
+  // With key points the ticks set the share; without them, the grade the player chose.
+  recall: (ch, res) =>
+    ch.key_points ? clamp01((res.ticked || []).length / ch.key_points.length) : (SELF_GRADES[res.grade] ?? 0),
   multi(ch, res) {
     const correct = new Set(ch.correct);
     const { right, wrong } = rightMinusWrong(new Set(res.picked || []), correct);

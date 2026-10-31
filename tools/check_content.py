@@ -40,7 +40,7 @@ PILLARS = {"The interview", "Core concepts", "Key technologies", "Patterns", "Qu
 KINDS = {"training", "quest"}
 GENERATORS = {"peak_rps": ("users", "actions"), "storage_year": ("items", "kb"),
               "shard_or_not": ("users", "writes"), "bandwidth": ("rps", "kb")}
-LIMITS = {"prompt": 300, "explain": 400, "answer": 240, "model": 500,
+LIMITS = {"prompt": 300, "explain": 400, "answer": 240, "principle": 240, "model": 500,
           "option": 90, "blurb": 160, "title": 40}
 ID_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 DEFAULT_W, DEFAULT_H, NODE_W, NODE_H = 640, 300, 120, 48
@@ -147,7 +147,8 @@ def check_list(rep, where, field, value, lo, hi, item_limit=LIMITS["option"]):
         return False
     for i, v in enumerate(value):
         check_len(rep, where, f"{field}[{i}]", v, item_limit)
-    if len(set(value)) != len(value):
+    texts = [v for v in value if isinstance(v, str)]  # only text can repeat; anything else is reported above
+    if len(set(texts)) != len(texts):
         rep.err(where, f"'{field}' has duplicates")
     return True
 
@@ -219,6 +220,10 @@ def check_challenge(rep, c, ch_where, prefixes, vault, allow_vault):
 
     if t == "recall":
         check_len(rep, where, "answer", c.get("answer"), LIMITS["answer"])
+        if "key_points" in c:
+            check_list(rep, where, "key_points", c["key_points"], 2, 6, 140)
+        if "principle" in c:
+            check_len(rep, where, "principle", c["principle"], LIMITS["principle"])
     elif t == "multi":
         if check_list(rep, where, "options", c.get("options"), 3, 8):
             n = len(c["options"])

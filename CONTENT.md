@@ -9,7 +9,7 @@ python3 tools/check_content.py content
 ## Rules for the words
 
 - **Original wording only.** Use public sources for facts, never their text. No sentence copied from any course, book or site.
-- **Bite-sized.** Prompts under 300 characters, answers under 240, options under 90, explanations under 400.
+- **Bite-sized.** Prompts under 300 characters, answers under 240, options under 90, explanations under 400, key points under 140, principles under 240.
 - **Teach the move, not a memorised design.** Trade-offs, "when you hear X, reach for Y", what it costs, what breaks first.
 - **Every explanation says what, why and the fix**, about the work, never the person: "Polling every second at this scale wastes requests. Server-sent events push only when something changes. Say: 'One-way updates, so SSE.'"
 - **Plain English first;** expand an abbreviation the first time a chapter uses it.
@@ -44,19 +44,19 @@ The boss is one of the chapter's challenges, often a harder one of any type. Lis
 
 ## Types
 
-| Type        | Extra fields                                                                                                   | Scored                                                 |
-| ----------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| `recall`    | `answer`                                                                                                       | Self-graded: again 0, hard ½, good 1, easy 1           |
-| `multi`     | `options` (3–8, more than 1.5 times as many as `correct`), `correct` (list of 0-based indices)                 | Right picks minus wrong picks, over the number correct |
-| `duel`      | `choices` (2–4), `correct` (index); `reasons` (3–5), `reason` (index); `costs` (3–5), `cost` (index)           | One third each for choice, reason and cost             |
-| `write`     | `key_points` (2–6), optional `model` (a model answer under 500 characters)                                     | Self-graded: key points ticked over key points         |
-| `estimate`  | `generator` with `kind` and its `params` (see below)                                                           | Within the tolerance of the worked answer              |
-| `fill`      | `diagram`, `slots` (node id → the right label), `palette` (labels, including every right one plus distractors) | Right slots over slots                                 |
-| `sticker`   | `diagram`, `stickers` (labels), `answers` (node id → list of stickers it needs; nodes left out need none)      | Right placements minus wrong ones, over the right ones |
-| `flaw`      | `diagram`, `flaw` (the weak node's id), `fixes` (3–5), `fix` (index)                                           | Half for the node, half for the fix                    |
-| `order`     | `items`, in the right order (3–8); the game shuffles them                                                      | Items in the right place over items                    |
-| `lightning` | `pairs` (6 or more `[when you hear, reach for]`), optional `seconds` (default 90)                              | Right answers over pairs shown                         |
-| `sprint`    | `minutes`, `checks` (3–8 things to tick after)                                                                 | Self-graded: checks ticked over checks                 |
+| Type        | Extra fields                                                                                                   | Scored                                                                                            |
+| ----------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `recall`    | `answer`; optional `key_points` (2–6) and `principle` (the idea in a line)                                     | Self-graded: again 0, hard ½, good 1, easy 1; with `key_points`, the ones ticked over all of them |
+| `multi`     | `options` (3–8, more than 1.5 times as many as `correct`), `correct` (list of 0-based indices)                 | Right picks minus wrong picks, over the number correct                                            |
+| `duel`      | `choices` (2–4), `correct` (index); `reasons` (3–5), `reason` (index); `costs` (3–5), `cost` (index)           | One third each for choice, reason and cost                                                        |
+| `write`     | `key_points` (2–6), optional `model` (a model answer under 500 characters)                                     | Self-graded: key points ticked over key points                                                    |
+| `estimate`  | `generator` with `kind` and its `params` (see below)                                                           | Within the tolerance of the worked answer                                                         |
+| `fill`      | `diagram`, `slots` (node id → the right label), `palette` (labels, including every right one plus distractors) | Right slots over slots                                                                            |
+| `sticker`   | `diagram`, `stickers` (labels), `answers` (node id → list of stickers it needs; nodes left out need none)      | Right placements minus wrong ones, over the right ones                                            |
+| `flaw`      | `diagram`, `flaw` (the weak node's id), `fixes` (3–5), `fix` (index)                                           | Half for the node, half for the fix                                                               |
+| `order`     | `items`, in the right order (3–8); the game shuffles them                                                      | Items in the right place over items                                                               |
+| `lightning` | `pairs` (6 or more `[when you hear, reach for]`), optional `seconds` (default 90)                              | Right answers over pairs shown                                                                    |
+| `sprint`    | `minutes`, `checks` (3–8 things to tick after)                                                                 | Self-graded: checks ticked over checks                                                            |
 
 ### Diagrams
 

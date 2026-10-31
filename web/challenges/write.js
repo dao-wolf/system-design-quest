@@ -1,5 +1,6 @@
 // The write challenge.
 import { h } from "../dom.js";
+import { tickList } from "./shared.js";
 
 export function write(c, body, finish) {
   const ta = h("textarea", { placeholder: "Write your answer. Bullet points are fine." });
@@ -12,31 +13,11 @@ export function write(c, body, finish) {
     }
     ta.disabled = true;
     btn.remove();
-    const ticks = c.key_points.map((kp, i) =>
-      h("label", { class: "opt", style: "display:flex;gap:10px" }, h("input", { type: "checkbox", value: i }), kp),
+    const [group, score] = tickList(c.key_points, "Tick the ones you covered", (ticked) =>
+      finish({ ticked, text: ta.value }),
     );
-    after.append(
-      h(
-        "div",
-        { class: "group" },
-        h("div", { class: "label" }, "Tick the ones you covered"),
-        h("div", { class: "options" }, ticks),
-      ),
-      c.model ? h("div", { class: "answerbox" }, h("b", {}, "One good answer: "), c.model) : null,
-      h(
-        "button",
-        {
-          class: "btn",
-          onclick: (e) => {
-            e.target.disabled = true;
-            ticks.forEach((t) => (t.querySelector("input").disabled = true));
-            const ticked = ticks.map((t, i) => (t.querySelector("input").checked ? i : null)).filter((x) => x != null);
-            finish({ ticked, text: ta.value });
-          },
-        },
-        "Score it",
-      ),
-    );
+    const model = c.model ? h("div", { class: "answerbox" }, h("b", {}, "One good answer: "), c.model) : null;
+    after.append(...[group, model, score].filter(Boolean));
   };
   body.append(ta, h("p"), btn, after);
 }

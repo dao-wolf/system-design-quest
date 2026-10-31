@@ -41,6 +41,19 @@ test("multi: ticking everything pays half at 4 right of 6, a quarter at 4 of 7, 
   assert.equal(everything(8, 1), 0); // seven wrong ticks cancel the one right: clamped at nothing, not below
 });
 
+test("recall with key points: the ticks over the key points; without them, the grade table", () => {
+  const withPoints = { type: "recall", key_points: ["a", "b", "c"] };
+  assert.ok(Math.abs(check(withPoints, { ticked: [0, 2] }).fraction - 2 / 3) < 1e-9);
+  assert.equal(check(withPoints, { ticked: [0, 1, 2] }).correct, true);
+  assert.equal(check(withPoints, {}).fraction, 0);
+  assert.equal(check(withPoints, { ticked: [0, 1, 2, 3] }).fraction, 1); // never more than all of it
+  assert.equal(check(withPoints, { grade: "easy" }).fraction, 0); // a grade means nothing once there are key points
+  assert.deepEqual(
+    ["again", "hard", "good", "easy"].map((grade) => check({ type: "recall" }, { grade }).fraction),
+    [0, 0.5, 1, 1],
+  );
+});
+
 test("duel: a third each for choice, reason and cost", () => {
   assert.equal(check(duel, { choice: 1, reason: 0, cost: 2 }).correct, true);
   assert.ok(Math.abs(check(duel, { choice: 1, reason: 1, cost: 2 }).fraction - 2 / 3) < 1e-9);

@@ -146,6 +146,22 @@ class Gate(unittest.TestCase):
         _, errors = self.run_gate([chapter([recall("a-01"), multi(8, 6)])])
         self.assertTrue(any("at most 5 right" in e for e in errors), errors)  # eight options cannot hold six right
 
+    def test_a_recall_may_carry_key_points_and_a_principle_within_limits(self):
+        def recall_with(**extra):
+            return chapter([recall("a-01", **extra), recall("a-02")])
+        ok = {"key_points": ["one point", "another point"], "principle": "The idea in a line."}
+        edge = {"key_points": ["x" * 140] + [f"point {i}" for i in range(5)], "principle": "p" * 240}  # six, at the limits
+        for good in (ok, edge):
+            self.assertEqual(self.run_gate([recall_with(**good)])[1], [])
+        for bad, text in (({"key_points": ["only one"]}, "key_points"), ({"key_points": [f"p{i}" for i in range(7)]}, "key_points"),
+                          ({"key_points": ["x" * 141, "fine"]}, "key_points"), ({"principle": "p" * 241}, "principle"),
+                          ({"key_points": ["same", "same"]}, "duplicates"), ({"key_points": []}, "key_points"),
+                          ({"key_points": None}, "key_points"), ({"key_points": "a, b"}, "key_points"),
+                          ({"principle": ""}, "principle"), ({"principle": None}, "principle"),
+                          ({"key_points": [["a"], "b"]}, "key_points[0]")):  # a list item is reported, not a crash
+            _, errors = self.run_gate([recall_with(**bad)])
+            self.assertTrue(any(text in e for e in errors), (bad, errors))
+
     def test_boss_prompt_label_is_refused(self):
         _, errors = self.run_gate([chapter([recall("a-01", prompt="Boss: do it")])])
         self.assertTrue(any("labels the boss itself" in e for e in errors))
