@@ -21,21 +21,26 @@ const fits = (page) => page.evaluate(() => globalThis.document.documentElement.s
 test("the Bloom tag explains its level and the whole ladder, and looks like it has more to read", async ({ page }) => {
   await playChapter(page, "drill-multi"); // understand
   const bloom = page.locator(".kind .pill.bloom");
-  await expect(bloom).toHaveText("understand");
-  await expect(bloom).toHaveAttribute("title", `Understand: explain it in your own words. ${LADDER}`);
+  await expect(bloom).toHaveText("understand · worth 15");
+  await expect(bloom).toHaveAttribute(
+    "title",
+    `Understand: explain it in your own words. ${LADDER} Worth 15 points before Sure, streak and second chance.`,
+  );
   await expect(bloom).toHaveCSS("text-decoration-style", "dotted");
   await expect(page.locator(".kind .pill:not(.bloom)").first()).not.toHaveCSS("text-decoration-style", "dotted");
 });
 
 test("a tap or the keyboard opens the Bloom explanation under the tags, and closes it again", async ({ page }) => {
   await playChapter(page, "drill-recall"); // remember
-  const bloom = page.getByRole("button", { name: "remember" });
+  const bloom = page.getByRole("button", { name: /^remember/ });
   const note = page.locator(".bloom-note");
   await expect(note).toBeHidden();
   await expect(bloom).toHaveAttribute("aria-expanded", "false");
 
   await bloom.click();
-  await expect(note).toHaveText(`Remember: recall the fact. ${LADDER}`);
+  await expect(note).toHaveText(
+    `Remember: recall the fact. ${LADDER} Worth 10 points before Sure, streak and second chance.`,
+  );
   await expect(bloom).toHaveAttribute("aria-expanded", "true");
   await bloom.click();
   await expect(note).toBeHidden();

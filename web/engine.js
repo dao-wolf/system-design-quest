@@ -199,11 +199,17 @@ function nextCombo(combo, correct, secondChance) {
   return secondChance ? combo : combo + 1;
 }
 
+// What a question is worth before anything multiplies it: a boss is 100 whatever its tag, else its Bloom level's points.
+export const baseOf = (ch, isBoss) => {
+  if (isBoss) return BOSS_POINTS;
+  return Object.hasOwn(BLOOM_POINTS, ch.bloom) ? BLOOM_POINTS[ch.bloom] : 10;
+};
+
 // The factors of the sum, so a card can show its working. Below the pass mark nothing is scored, so the share is 0 and
 // the base is still there to see. Sure pays only when everything is right.
 function partsOf(ch, fraction, { confidence, secondChance, isBoss }, combo) {
   return {
-    base: isBoss ? BOSS_POINTS : (BLOOM_POINTS[ch.bloom] ?? 10),
+    base: baseOf(ch, isBoss),
     share: fraction >= PASS_MARK ? fraction : 0,
     sure: fraction >= 0.999 && confidence === "sure" ? 1.5 : 1,
     streak: multiplier(combo),

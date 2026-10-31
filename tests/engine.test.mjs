@@ -17,6 +17,7 @@ import {
   bossBeaten,
   BOSS_POINTS,
   PASS_MARK,
+  baseOf,
 } from "../web/engine.js";
 
 const multi = { type: "multi", bloom: "understand", options: ["a", "b", "c", "d"], correct: [0, 2] };
@@ -91,6 +92,13 @@ test("points: harder is worth more, sure-and-right ×1.5, combos ×2 and ×3, mi
   assert.equal(score(ch, 0.4, {}).points, 0);
   assert.equal(score(ch, 1, { secondChance: true, combo: 1 }).combo, 1);
   assert.equal(score(ch, 1, { isBoss: true }).points, 100);
+});
+
+test("baseOf: a level's points, 100 for a boss whatever its tag, and 10 for a tag the ladder lacks", () => {
+  for (const [bloom, points] of Object.entries(BLOOM_POINTS)) assert.equal(baseOf({ bloom }, false), points);
+  for (const bloom of Object.keys(BLOOM_POINTS)) assert.equal(baseOf({ bloom }, true), BOSS_POINTS, bloom);
+  assert.deepEqual([baseOf({}, false), baseOf({ bloom: "nonsense" }, false)], [10, 10]);
+  assert.equal(baseOf({ bloom: "constructor" }, false), 10); // a name the ladder inherits is not a level
 });
 
 // The points are the factors of the sum multiplied together and rounded once, so a card can show its working.
