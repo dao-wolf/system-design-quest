@@ -70,7 +70,7 @@ test("the calibration line says it counts first tries, in the order Sure, Fairly
   const cal = { guess: { n: 2, right: 0 }, sure: { n: 4, right: 3 }, fairly: { n: 1, right: 1 } };
   assert.equal(
     calibrationLine(cal),
-    "On first tries: Sure 3 of 4 right · Fairly 1 of 1 right · Guess 0 of 2 right. A well-judged Sure is right about 4 times in 5.",
+    "On first tries: Sure 3 of 4 right · Fairly 1 of 1 right · Guess 0 of 2 right. Aim for your Sure to be right at least 4 times in 5.",
   );
   assert.equal(calibrationLine({ fairly: { n: 1, right: 0 } }), "On first tries: Fairly 0 of 1 right.");
   assert.equal(calibrationLine({}), null);
@@ -79,8 +79,8 @@ test("the calibration line says it counts first tries, in the order Sure, Fairly
 test("the yardstick for Sure appears from three Sures, and whatever they scored", () => {
   const sure = (n, right) => calibrationLine({ sure: { n, right } });
   assert.equal(sure(2, 2), "On first tries: Sure 2 of 2 right.");
-  assert.equal(sure(3, 0), "On first tries: Sure 0 of 3 right. A well-judged Sure is right about 4 times in 5.");
-  assert.ok(sure(5, 5).endsWith(" A well-judged Sure is right about 4 times in 5."));
+  assert.equal(sure(3, 0), "On first tries: Sure 0 of 3 right. Aim for your Sure to be right at least 4 times in 5.");
+  assert.ok(sure(5, 5).endsWith(" Aim for your Sure to be right at least 4 times in 5."));
 });
 
 test("a boss is worth 100 whatever its tag, and a tag the ladder does not know is called the base", () => {
