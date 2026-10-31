@@ -1,6 +1,6 @@
 // A run through a chapter: starting it, then each challenge in turn until the results. What happens once an answer
 // is in lives in answer.js.
-import { bloomHelp, runOrder } from "./engine.js";
+import { baseOf, bloomHelp, runOrder } from "./engine.js";
 import { app, chapterBySlug } from "./state.js";
 import { h, show, toast } from "./dom.js";
 import { baseEvent, post } from "./store.js";
@@ -13,7 +13,7 @@ import { showResults } from "./screens/results.js";
 const CONFIDENCE = [
   ["guess", "😬 Guess"],
   ["fairly", "🙂 Fairly"],
-  ["sure", "😎 Sure (×1.5 if right)"],
+  ["sure", "😎 Sure (×1.5 if all right)"],
 ];
 // Types that keep their own clock, so they get no countdown in the header.
 const OWN_CLOCK = new Set(["lightning", "sprint"]);
@@ -176,8 +176,9 @@ function runBar(run, label) {
 }
 
 // The Bloom tag explains itself on hover (title), and on a tap or the keyboard in a note under the tags.
-function bloomTag(c) {
-  const help = bloomHelp(c.bloom);
+function bloomTag(c, isBoss) {
+  const worth = baseOf(c, isBoss);
+  const help = `${bloomHelp(c.bloom)} Worth ${worth} points before Sure, streak and second chance.`;
   const note = h("div", { class: "bloom-note muted", hidden: true }, help);
   const tag = h(
     "button",
@@ -191,7 +192,7 @@ function bloomTag(c) {
         tag.setAttribute("aria-expanded", String(!note.hidden));
       },
     },
-    c.bloom,
+    `${c.bloom} · worth ${worth}`,
   );
   return [tag, note];
 }
@@ -201,14 +202,14 @@ function kindPills({ run, c, second, isBoss }) {
     "div",
     { class: "kind" },
     h("span", { class: "pill" }, TYPE_LABEL[c.type]),
-    bloomTag(c),
+    bloomTag(c, isBoss),
     isBoss ? h("span", { class: "pill boss-tag" }, "👹 Boss") : null,
     second ? h("span", { class: "pill" }, "🔁 Second chance · half points") : null,
     run.phase === "single" ? h("span", { class: "pill" }, "🎯 Coach's challenge") : null,
   );
 }
 
-// How sure the player is, asked before answering: sure and right earns ×1.5.
+// How sure the player is, asked before answering: sure and all right earns ×1.5.
 function confidencePicker(state) {
   const conf = h("div", { class: "conf" }, h("span", { class: "muted" }, "How sure are you?"));
   for (const [k, label] of CONFIDENCE) {

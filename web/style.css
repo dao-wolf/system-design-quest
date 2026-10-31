@@ -381,7 +381,7 @@ button.pill {
 }
 .combo {
   font-weight: 800;
-  color: var(--part);
+  color: var(--ink); /* the amber text was 3.03 to 1 on the stat bar and 3.14 on a green card */
 }
 .challenge .kind {
   display: flex;
@@ -392,7 +392,7 @@ button.pill {
 }
 .boss-tag {
   background: var(--bad);
-  color: #fff;
+  color: var(--accent-ink); /* white on the light red, dark on the dark theme's lighter red (white was 2.94 to 1) */
 }
 .prompt {
   font-size: 19px;
@@ -607,7 +607,7 @@ textarea {
 }
 .timer.low {
   background: var(--bad);
-  color: #fff;
+  color: var(--accent-ink);
 }
 .bigtimer {
   font-size: 56px;

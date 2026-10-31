@@ -31,7 +31,7 @@ const gotRecall = async (page) => {
   await button(page, "✅ Got it").click();
 };
 const next = (page) => button(page, "Next ▶").click();
-const sure = (page) => button(page, "😎 Sure (×1.5 if right)").click();
+const sure = (page) => button(page, "😎 Sure (×1.5 if all right)").click();
 
 const receipt = (page) => page.locator(".feedback .receipt");
 const sum = (page) => receipt(page).locator(".sum");
