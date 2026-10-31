@@ -87,7 +87,7 @@ test("Save for later skips the second chances: the boss comes next and the misse
   await button(page, "Check").click();
   await next(page);
 
-  await expect(page.getByText("Missed first time:")).toBeVisible();
+  await expect(page.getByText("Not fully right first time:")).toBeVisible();
   await expect(page.getByRole("listitem").filter({ hasText: recall.prompt })).toBeVisible();
   const record = await page.evaluate(() => JSON.parse(localStorage.getItem("sdq-events-v1")));
   expect(record.filter((e) => e.kind === "answer" && e.second_chance)).toHaveLength(0);
@@ -234,7 +234,7 @@ test("a replay of the misses that misses again hands over too, and Save for late
   await next(page);
   await expect(page.locator(".handoff")).toContainText("First pass done: 0 of 1 right.");
   await button(page, "Save for later").click();
-  await expect(page.getByText("Missed first time:")).toBeVisible();
+  await expect(page.getByText("Not fully right first time:")).toBeVisible();
   await expect(page.locator(".kind")).toHaveCount(0);
 });
 

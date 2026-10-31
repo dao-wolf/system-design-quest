@@ -1,6 +1,7 @@
 // The feedback after an answer: the verdict, the points and the sum behind them, the explanation and its source, then
 // Next, Ask coach and Flag.
 import { app } from "./state.js";
+import { BOSS_PASS, bossBeaten } from "./engine.js";
 import { h, richText } from "./dom.js";
 import { baseEvent, post, summarise } from "./store.js";
 import { receipt } from "./receipt.js";
@@ -9,11 +10,17 @@ import { advance } from "./play.js";
 
 const BOSS_BEATEN = "👹 Boss beaten!";
 
+// A boss counts as beaten at 80%. The card is amber for any partial answer, so it says which side of the line this was.
+const bossNote = (isBoss, fraction) =>
+  isBoss && !bossBeaten(fraction)
+    ? h("div", { class: "muted boss-note" }, `Not beaten yet: a boss needs ${Math.round(BOSS_PASS * 100)}%.`)
+    : null;
+
 // The verdict and its colour. A boss counts as beaten at 80%, short of full marks.
 function verdictOf(s, fraction, isBoss) {
   if (s.correct) return [isBoss ? BOSS_BEATEN : "✅ Right", "right"];
-  if (fraction < 0.5) return ["❌ Not this time", "wrong"];
-  return isBoss && fraction >= 0.8 ? [BOSS_BEATEN, "right"] : ["🟡 Partly", "part"];
+  if (fraction <= 0) return ["❌ Not this time", "wrong"];
+  return isBoss && bossBeaten(fraction) ? [BOSS_BEATEN, "right"] : ["🟡 Partly", "part"];
 }
 
 // A public source links out; a personal one names the note it came from.
@@ -164,7 +171,7 @@ function feedbackActions(c, res) {
 }
 
 // The sum on one line, and the table that works it out, folded away until the player asks.
-function receiptCard({ line, rows }) {
+function receiptCard({ line, note, rows }) {
   const table = h(
     "table",
     { "aria-label": "How the points were worked out" },
@@ -178,6 +185,7 @@ function receiptCard({ line, rows }) {
     "div",
     { class: "receipt" },
     h("div", { class: "sum" }, line),
+    note ? h("div", { class: "muted" }, `(${note})`) : null,
     h("details", {}, h("summary", {}, "How this was worked out"), table),
   );
 }
@@ -188,13 +196,23 @@ export function feedback({ c, isBoss, comesBack, streakLost, state }, res, fract
   return h(
     "div",
     { class: `feedback ${cls}` },
-    s.points ? h("div", { class: "plus" }, `+${s.points}`) : null,
     h(
       "div",
-      { class: "verdict" },
-      verdict,
-      s.multiplier > 1 && s.correct ? h("span", { class: "combo" }, `  🔥 ×${s.multiplier}`) : "",
+      { class: "head" },
+      h(
+        "div",
+        { class: "verdict" },
+        verdict,
+        s.multiplier > 1 && s.correct ? h("span", { class: "combo" }, `  🔥 ×${s.multiplier}`) : "",
+      ),
+      h(
+        "div",
+        { class: s.points ? "plus" : "plus none" },
+        `+${s.points}`,
+        s.correct ? null : h("small", {}, ` of ${s.max}`),
+      ),
     ),
+    bossNote(isBoss, fraction),
     comesBack ? h("div", { class: "muted" }, "It gets a second chance after this pass, for half points.") : null,
     streakLost ? h("div", { class: "muted" }, `Streak reset, best this run: ${streakLost}.`) : null,
     receiptCard(

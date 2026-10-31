@@ -10,6 +10,8 @@ import { flaw } from "./flaw.js";
 import { order } from "./order.js";
 import { lightning } from "./lightning.js";
 import { sprint } from "./sprint.js";
+import { coverage } from "../receipt.js";
+import { coverageNote } from "./shared.js";
 
 export const TYPE_LABEL = {
   recall: "🃏 Recall",
@@ -31,4 +33,6 @@ export const RENDER = { recall, multi, duel, write, estimate, fill, sticker, fla
 export const REVEAL_TEXT = {
   estimate: revealEstimate,
   recall: () => null,
+  write: (c, res) => coverageNote(coverage(c.key_points, res.ticked)),
+  sprint: (c, res) => coverageNote(coverage(c.checks, res.ticked)),
 };

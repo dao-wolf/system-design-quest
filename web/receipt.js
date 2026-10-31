@@ -71,18 +71,32 @@ function rowsOf(name, right, s, ctx) {
     ["Streak", streakRow(parts, s.combo, ctx.streakLost)],
     parts.second < 1 && ["Second chance", `×${parts.second} (second chances pay half)`],
     ["Total", `${exactText(s.exact, s.points)} → +${s.points}`],
+    !s.correct && ["If all right", `+${s.max} (what it pays when all of it is right)`],
   ].filter(Boolean);
 }
 
+// What it takes to score, in the answer's own parts ("2 of 3 parts"). A type with no parts has no pass mark to show.
+function needed(c) {
+  if (!Object.hasOwn(PARTS, c.type)) return null;
+  const [total, noun] = PARTS[c.type](c);
+  return `${Math.ceil(PASS_MARK * total)} of ${total} ${noun}`;
+}
+
 // ctx: whether it was a boss, how sure the player said they were (and whether Sure was offered), and the streak that
-// just ended (0 if none).
+// just ended (0 if none). The note is there when the answer fell short of the pass mark.
 export function receipt(c, fraction, s, ctx) {
   const name = label(c, ctx.isBoss);
   const [short, long] = shareWords(c, fraction, s.correct);
-  const under = s.parts.share === 0 && fraction > 0; // some of it right, but short of the pass mark
-  const mark = pct(PASS_MARK);
+  const need = s.correct ? null : needed(c);
   return {
-    line: lineOf(name, s.parts, under ? `${short}, under ${mark}` : short, s.points),
-    rows: rowsOf(name, under ? `${long} (under the ${mark} needed to score)` : long, s, ctx),
+    line: lineOf(name, s.parts, short, s.points),
+    note: need && s.parts.share === 0 ? `Needed to score: ${need}` : null,
+    rows: rowsOf(name, need ? `${long} (${pct(PASS_MARK)} needed to score)` : long, s, ctx),
   };
+}
+
+// Which of a list the player ticked, and which are left to add, in the order the list gives them.
+export function coverage(items, ticked) {
+  const got = new Set(ticked);
+  return { covered: items.filter((_, i) => got.has(i)), next: items.filter((_, i) => !got.has(i)) };
 }

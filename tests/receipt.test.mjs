@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { score, multiplier } from "../web/engine.js";
-import { receipt } from "../web/receipt.js";
+import { coverage, receipt } from "../web/receipt.js";
 
 const duel = { type: "duel", bloom: "evaluate" };
 const understand = { type: "multi", bloom: "understand", correct: [0, 2] };
@@ -20,10 +20,11 @@ test("a partly right duel: the line, and a row for what each factor was", () => 
   assert.equal(r.line, "Evaluate 40 × 2 of 3 parts = +27");
   assert.deepEqual(r.rows, [
     ["Worth", "Evaluate: 40"],
-    ["Right", "2 of 3 parts = 67%"],
+    ["Right", "2 of 3 parts = 67% (50% needed to score)"],
     ["Sure bonus", "not used"],
     ["Streak", "×1 (3 right in a row gives ×2, 5 gives ×3)"],
     ["Total", "26.7 → +27"],
+    ["If all right", "+40 (what it pays when all of it is right)"],
   ]);
 });
 
@@ -73,17 +74,51 @@ test("a boss is worth 100 whatever its tag, and a tag the ladder does not know i
   assert.equal(wording({ type: "recall", bloom: "nonsense" }, 1).line, "Base 10 × all right = +10");
 });
 
-test("under the pass mark the line and the Right row say so, and a plain miss does not", () => {
-  for (const fraction of [0.1, 1 / 3, 0.49]) {
+test("the pass mark: a partial answer says what is needed, and one short of it says how many that is", () => {
+  for (const fraction of [0, 0.1, 1 / 3, 0.49]) {
     const under = wording(duel, fraction);
-    assert.ok(under.line.endsWith(", under 50% = +0"), under.line);
-    assert.ok(rows(under).Right.endsWith(" (under the 50% needed to score)"), rows(under).Right);
+    assert.equal(under.note, "Needed to score: 2 of 3 parts");
+    assert.ok(rows(under).Right.endsWith(" = " + Math.round(fraction * 100) + "% (50% needed to score)"));
     assert.equal(rows(under).Total, "0 → +0"); // nothing is scored, so nothing is multiplied
   }
-  assert.ok(!wording(duel, 0.5).line.includes("under"));
-  const none = wording(duel, 0);
-  assert.equal(none.line, "Evaluate 40 × 0 of 3 parts = +0");
-  assert.equal(rows(none).Right, "0 of 3 parts = 0%");
+  const exactly = wording({ type: "flaw" }, 0.5); // at the mark: scored, so no note
+  assert.equal(exactly.note, null);
+  assert.equal(rows(exactly).Right, "1 of 2 parts = 50% (50% needed to score)");
+  const right = wording(duel, 1);
+  assert.equal(right.note, null);
+  assert.ok(!Object.hasOwn(rows(right), "If all right")); // nothing to compare it with
+});
+
+test("how many are needed rounds up, in the answer's own parts; a type with no parts has no pass mark to show", () => {
+  const need = (c, fraction) => wording(c, fraction).note;
+  assert.equal(need({ type: "write", key_points: Array(5).fill(0) }, 0.4), "Needed to score: 3 of 5 key points");
+  assert.equal(need({ type: "sprint", checks: Array(4).fill(0) }, 0.25), "Needed to score: 2 of 4 checks");
+  assert.equal(
+    need({ type: "multi", correct: [0, 1, 2] }, 1 / 3),
+    "Needed to score: 2 of 3 right picks, less wrong ones",
+  );
+  for (const type of ["recall", "estimate"]) {
+    const none = wording({ type }, 0);
+    assert.equal(none.note, null);
+    assert.equal(rows(none).Right, "0%");
+  }
+});
+
+test("If all right shows what the same answer pays when everything is right, rounded as the points are", () => {
+  const sure = wording(understand, 0.3, { confidence: "sure" });
+  assert.equal(rows(sure)["If all right"], "+23 (what it pays when all of it is right)"); // 22.5 rounds up
+  assert.equal(rows(wording(duel, 0.3, { combo: 2 }))["If all right"].slice(0, 5), "+80 (");
+});
+
+test("coverage: the points ticked and the ones to add, in the order the list gives them", () => {
+  const items = ["a scale figure", "a latency target", "availability"];
+  assert.deepEqual(coverage(items, [2, 0]), {
+    covered: ["a scale figure", "availability"],
+    next: ["a latency target"],
+  });
+  assert.deepEqual(coverage(items, []), { covered: [], next: items });
+  assert.deepEqual(coverage(items, [0, 1, 2]), { covered: items, next: [] });
+  assert.deepEqual(coverage(items, undefined), { covered: [], next: items });
 });
 
 test("the decimal is shown to one place, or two when one would look like it rounds the wrong way", () => {
@@ -111,6 +146,7 @@ test("each type counts its own parts, a type with none shows a percentage, and w
     const r = receipt(c, fraction, score(c, fraction), { isBoss: false, confidence: null, sureOffered: true });
     const pct = `${Math.round(fraction * 100)}%`;
     assert.ok(r.line.includes(` × ${words}`), `${c.type}: ${r.line}`);
-    assert.equal(rows(r).Right, ["recall", "estimate"].includes(c.type) ? words : `${words} = ${pct}`, c.type);
+    const right = ["recall", "estimate"].includes(c.type) ? words : `${words} = ${pct}`;
+    assert.equal(rows(r).Right, / of /.test(words) ? `${right} (50% needed to score)` : right, c.type);
   }
 });

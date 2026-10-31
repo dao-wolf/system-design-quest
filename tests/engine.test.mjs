@@ -14,6 +14,7 @@ import {
   bloomHelp,
   BLOOM_POINTS,
   BOSS_PASS,
+  bossBeaten,
   BOSS_POINTS,
   PASS_MARK,
 } from "../web/engine.js";
@@ -130,6 +131,29 @@ test("parts: each factor on its own", () => {
     const s = score(c, fraction, opts);
     assert.equal(part in s ? s[part] : s.parts[part], want, `${part} at ${fraction} with ${JSON.stringify(opts)}`);
   }
+});
+
+test("bossBeaten: 80% or better, and nothing short of it", () => {
+  assert.deepEqual(
+    [bossBeaten(0.8), bossBeaten(1), bossBeaten(0.7999), bossBeaten(0.5), bossBeaten(0)],
+    [true, true, false, false, false],
+  );
+  assert.equal(BOSS_PASS, 0.8);
+});
+
+test("max: what the same answer pays when everything is right, under the same Sure, streak and second chance", () => {
+  const evaluate = { bloom: "evaluate" };
+  assert.equal(score(evaluate, 2 / 3).max, 40);
+  assert.equal(score(evaluate, 2 / 3, { confidence: "sure" }).max, 60); // Sure is only paid when all is right
+  assert.equal(score(evaluate, 0.3, { combo: 1 }).max, 40);
+  assert.equal(score(evaluate, 0.3, { combo: 2 }).max, 80); // a full answer would be the third in a row
+  assert.equal(score(evaluate, 0.3, { combo: 4 }).max, 120);
+  assert.equal(score(evaluate, 0.3, { secondChance: true }).max, 20);
+  assert.equal(score(evaluate, 0.3, { secondChance: true, combo: 2 }).max, 20); // a second chance adds none to the streak
+  assert.equal(score(evaluate, 0, { isBoss: true }).max, 100);
+  assert.equal(score({ bloom: "understand" }, 0.3, { confidence: "sure" }).max, 23); // 22.5 rounds up, as points do
+  const full = score(evaluate, 1, { confidence: "sure", combo: 2 });
+  assert.equal(full.max, full.points);
 });
 
 test("points: the decimal is kept in exact and rounded once, halves up", () => {

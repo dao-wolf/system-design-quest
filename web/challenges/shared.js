@@ -1,6 +1,24 @@
 // Building blocks the challenge types share.
 import { h } from "../dom.js";
 
+// What a written or timed answer covered, and what to add next time.
+export function coverageNote({ covered, next }) {
+  const list = (title, items) => [
+    h("b", {}, title),
+    h(
+      "ul",
+      {},
+      items.map((item) => h("li", {}, item)),
+    ),
+  ];
+  return h(
+    "div",
+    { class: "coverage" },
+    covered.length ? list("You covered:", covered) : [h("b", {}, "You covered: "), "none of them"],
+    next.length ? list("Add next time:", next) : null,
+  );
+}
+
 export const submitBtn = (label = "Check") => h("button", { class: "btn", disabled: true }, label);
 
 export function optionList(items, { multi = false, onChange }) {

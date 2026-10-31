@@ -51,18 +51,25 @@ const seriousViolations = async (page) => {
 test("a partly right duel shows its sum on one line, and a folded table works it out", async ({ page }) => {
   await playChapter(page, "drill-duel");
   await answerDuel(page, duel, { cost: 0 }); // two of three parts
-  await seen(page.locator(".feedback .plus"), "+27");
+  await seen(page.locator(".feedback .plus"), "+27 of 40");
   await seen(sum(page), "Evaluate 40 × 2 of 3 parts = +27");
   await expect(receipt(page).locator("table")).toBeHidden(); // folded until asked for
-  await tableHas(page, { Worth: "Evaluate: 40", Right: "2 of 3 parts = 67%", Total: "26.7 → +27" });
+  await tableHas(page, {
+    Worth: "Evaluate: 40",
+    Right: "2 of 3 parts = 67% (50% needed to score)",
+    Total: "26.7 → +27",
+    "If all right": "+40 (what it pays when all of it is right)",
+  });
 });
 
-test("an answer under the pass mark says so, instead of a sum that does not add up", async ({ page }) => {
+test("an answer under the pass mark says how many were needed, instead of a sum that does not add up", async ({
+  page,
+}) => {
   await playChapter(page, "drill-duel");
   await answerDuel(page, duel, { reason: 1, cost: 0 }); // one of three parts
-  await expect(page.locator(".feedback .verdict")).toContainText("❌ Not this time");
-  await seen(sum(page), "Evaluate 40 × 1 of 3 parts, under 50% = +0");
-  await tableHas(page, { Right: "1 of 3 parts = 33% (under the 50% needed to score)", Total: "0 → +0" });
+  await seen(sum(page), "Evaluate 40 × 1 of 3 parts = +0");
+  await expect(receipt(page)).toContainText("Needed to score: 2 of 3 parts");
+  await tableHas(page, { Right: "1 of 3 parts = 33% (50% needed to score)", Total: "0 → +0" });
 });
 
 test("the boss on a third right answer in a row pays ×2, and the streak row says so", async ({ page }) => {

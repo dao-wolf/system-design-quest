@@ -172,7 +172,7 @@ test("a run brings a miss back for a second chance, then the boss, then the resu
   await expect(page.getByText("+118 XP")).toBeVisible();
   await expect(page.getByText("✅ 3 of 4 right")).toBeVisible();
   await expect(page.getByText("🔥 best run of 2")).toBeVisible();
-  await expect(page.getByText("Missed first time:")).toBeVisible();
+  await expect(page.getByText("Not fully right first time:")).toBeVisible();
   await expect(page.getByRole("listitem").filter({ hasText: multi.prompt })).toBeVisible();
   const record = await page.evaluate(() => JSON.parse(localStorage.getItem("sdq-events-v1")));
   expect(record.filter((e) => e.kind === "answer").map((e) => e.challenge)).toEqual([
