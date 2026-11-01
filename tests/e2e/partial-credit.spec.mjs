@@ -156,6 +156,7 @@ test("at 320 px a long verdict and the points do not run into each other", async
   await answerDuel(page, boss);
   await expect(page.locator(".feedback .verdict")).toContainText("👹 Boss beaten!");
   await expect(page.locator(".feedback .verdict")).toContainText("×2");
+  await expect(button(page, "Next ▶")).toBeFocused(); // the feedback has scrolled itself into view by now
   const plus = await page.locator(".feedback .plus").boundingBox();
   const lines = await page.locator(".feedback .verdict").evaluate((el) => {
     const range = globalThis.document.createRange();
@@ -176,6 +177,7 @@ for (const scheme of ["light", "dark"]) {
     await page.setViewportSize({ width: 375, height: 900 });
     await playChapter(page, "drill-sprint");
     await doSprint(page, [0]);
+    await expect(button(page, "Next ▶")).toBeFocused(); // the feedback has scrolled itself into view by now
     await page.getByText("How this was worked out").click();
 
     const words = (sel) =>

@@ -109,6 +109,7 @@ for (const [scheme, kind, answer, total] of [
     await page.setViewportSize({ width: 375, height: 900 });
     await playChapter(page, "drill-duel");
     await answerDuel(page, duel, answer);
+    await expect(button(page, "Next ▶")).toBeFocused(); // the feedback has scrolled itself into view by now
     await tableHas(page, { Total: total });
 
     const box = (sel) => page.locator(sel).first().boundingBox();

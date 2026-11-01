@@ -40,15 +40,32 @@ export function show(...nodes) {
   // At once, even on a page that scrolls smoothly (daowolf.com): a new screen is like a new page, and the next tap
   // must land on what the player sees.
   const host = ROOT.host || document.body;
-  const headerHeight = parseFloat(getComputedStyle(host).scrollMarginTop) || 0;
-  if (host.getBoundingClientRect().top < headerHeight) scrollToTop(host);
+  if (host.getBoundingClientRect().top < headerHeight(host)) scrollToTop(host);
 }
+// How far a host page's own header reaches down the screen: the game's scroll-margin-top is --sticky-top.
+const headerHeight = (host) => parseFloat(getComputedStyle(host).scrollMarginTop) || 0;
 function scrollToTop(el) {
   try {
     el.scrollIntoView({ block: "start", behavior: "instant" });
   } catch {
     // A browser that predates "instant" rejects the option: scroll anyway.
     el.scrollIntoView(true);
+  }
+}
+// Brings something that has just appeared into view, and does nothing if it is all there already. It stops below the
+// host page's header and the game's own top bar, which stay stuck to the top of the screen. One taller than the screen
+// lands with its top at the top, where the player starts reading, and so does one whose top is already out of sight
+// (the player scrolled away before a timed answer ran out): "nearest" would leave such a one alone, or show its foot.
+// At once, as in show().
+export function scrollIntoReach(el) {
+  const bar = ROOT.querySelector(".top");
+  const gap = headerHeight(ROOT.host || document.body) + (bar ? bar.offsetHeight : 0) + 8;
+  el.style.scrollMarginTop = `${gap}px`;
+  const block = el.getBoundingClientRect().top < gap ? "start" : "nearest";
+  try {
+    el.scrollIntoView({ block, behavior: "instant" });
+  } catch {
+    el.scrollIntoView({ block });
   }
 }
 export function toast(text) {
