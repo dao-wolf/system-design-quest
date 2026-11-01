@@ -529,6 +529,45 @@
           "explain": "A time to live bounds how stale an entry can get."
         }
       ]
+    },
+    {
+      "chapter": 15,
+      "slug": "drill-tall",
+      "title": "Tall feedback drill",
+      "emoji": "📐",
+      "pillar": "Core concepts",
+      "blurb": "One long list to put in order, so its feedback is taller than half a phone screen.",
+      "open": true,
+      "boss": "tall-boss",
+      "challenges": [
+        {
+          "id": "tall-1",
+          "type": "order",
+          "bloom": "remember",
+          "prompt": "Put the steps of a design round in order.",
+          "items": [
+            "Ask what the product must do",
+            "Pin down the numbers: users, reads, writes",
+            "Sketch the API",
+            "Draw the high-level boxes",
+            "Choose where the data lives",
+            "Go deep on the hottest path",
+            "Name the bottlenecks",
+            "Say what you would build next"
+          ],
+          "explain": "Requirements come first, because every box later has to serve one. The numbers decide whether one machine will do. Then the API, the boxes and the data, before any deep dive: a deep dive into the wrong design is wasted time. Close with the bottlenecks and what you would do next, so the interviewer hears you weigh trade-offs, and sees where the design is weakest.",
+          "source": "https://en.wikipedia.org/wiki/Systems_design"
+        },
+        {
+          "id": "tall-boss",
+          "type": "recall",
+          "bloom": "remember",
+          "prompt": "What comes first in a design round?",
+          "answer": "The requirements.",
+          "explain": "Everything else serves them.",
+          "source": "https://en.wikipedia.org/wiki/Systems_design"
+        }
+      ]
     }
   ]
 }

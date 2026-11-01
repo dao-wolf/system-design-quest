@@ -2,7 +2,7 @@
 // Next, Ask coach and Flag.
 import { app } from "./state.js";
 import { BOSS_PASS, bossBeaten } from "./engine.js";
-import { h, richText } from "./dom.js";
+import { h, richText, scrollIntoReach } from "./dom.js";
 import { baseEvent, post, summarise } from "./store.js";
 import { receipt } from "./receipt.js";
 import { REVEAL_TEXT, SELF_GRADED } from "./challenges/index.js";
@@ -166,7 +166,12 @@ function feedbackActions(c, res) {
     actions.append(h("button", { class: "btn ghost", onclick: () => askCoach(c, res, actions) }, "💬 Ask coach"));
   const flag = flagControl(c);
   actions.append(flag.button);
-  setTimeout(() => nextBtn.focus(), 50);
+  // Once the card is on the page. Focus alone would scroll by centring Next, which hides the verdict above the top
+  // when the card is taller than half the screen: so focus without scrolling, then bring the card itself into view.
+  setTimeout(() => {
+    nextBtn.focus({ preventScroll: true });
+    scrollIntoReach(nextBtn.closest(".feedback"));
+  }, 50);
   return [actions, flag.slot];
 }
 
